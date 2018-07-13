@@ -115,6 +115,7 @@ function removeImportMacro(node) {
 }
 
 async function registerProcessors(imports, importModule) {
+  let globalProcessors = [];
   let registry = new Map();
 
   for (let specifier of imports) {
@@ -123,16 +124,18 @@ async function registerProcessors(imports, importModule) {
     if (typeof module.registerMacros !== 'function')
       throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
 
-    await module.registerMacros(registry);
+    let processor = await module.registerMacros(registry);
+    if (processor)
+      globalProcessors.push(processor);
   }
 
   registry.set('import', removeImportMacro);
+  registry.globalProcessors = globalProcessors;
 
   return registry;
 }
 
 async function runProcessors(list, registry) {
-  // TODO: What if we want to overwrite the whole tree?
   for (let { node, annotations } of list) {
     for (let annotation of annotations) {
       let name = annotation.path.map(ident => ident.value).join('.');
@@ -146,6 +149,9 @@ async function runProcessors(list, registry) {
       await processor(node);
     }
   }
+
+  for (let processor of registry.globalProcessors)
+    await processor(node);
 }
 
 async function importModule(specifier) {
