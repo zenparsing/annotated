@@ -19,6 +19,9 @@ Not MVP:
 
 
 import { AST, parse, print } from './parser.js';
+import { Loader } from './Loader.js';
+import { Registry } from './Registry.js';
+import { MacroAPI } from './MacroAPI.js';
 
 function addToParentScope(node, newNode) {
   let { parent } = node;
@@ -106,83 +109,52 @@ function getMacroImports(list) {
   return modules;
 }
 
-function removeImportMacro(node) {
-  // TODO: Does parent always have "statements"?
-  let { statements } = node.parent;
-  let pos = statements.indexOf(node);
-  // Assert: pos >= 0
-  statements.splice(pos, 1);
-}
-
-async function registerProcessors(imports, importModule) {
-  let globalProcessors = [];
-  let registry = new Map();
+async function registerProcessors(imports, loader) {
+  let registry = new Registry();
+  let api = new MacroAPI(registry);
 
   for (let specifier of imports) {
-    let module = await importModule(specifier);
-
-    if (typeof module.registerMacros !== 'function')
+    let module = await loader.load(specifier);
+    if (typeof module.registerMacros !== 'function') {
       throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
+    }
 
-    let processor = await module.registerMacros(registry);
-    if (processor)
-      globalProcessors.push(processor);
+    await module.registerMacros(api);
   }
 
-  registry.set('import', removeImportMacro);
-  registry.globalProcessors = globalProcessors;
+  registry.define('import', node => api.removeNode(node));
 
   return registry;
 }
 
-async function runProcessors(list, registry) {
+async function runProcessors(root, list, registry) {
   for (let { node, annotations } of list) {
     for (let annotation of annotations) {
       let name = annotation.path.map(ident => ident.value).join('.');
-      if (!registry.has(name))
-        throw new SyntaxError(`Macro processor '${ name }' not found`);
-
-      let processor = registry.get(name);
-      if (typeof processor !== 'function')
-        throw new SyntaxError(`Macro processor '${ name }' is not a function`);
-
-      await processor(node);
+      let processor = registry.getNamedMacro(name);
+      await processor(node, annotation);
     }
   }
 
-  for (let processor of registry.globalProcessors)
-    await processor(node);
+  for (let processor of registry.globalMacros)
+    await processor(root);
 }
 
-async function importModule(specifier) {
-  return {
-    registerMacros(registry) {
-      registry.set('private', () => {});
-      registry.set('customElement', () => {});
-    }
-  }
-  // TODO: this is completely wrong. It needs to be resolved
-  // relative to the input file.
-  return require(specifier);
-}
-
-async function expandMacros(source) {
+async function expandMacros(source, location) {
+  let loader = new Loader(location);
   let result = parse(source, { addParentLinks: true });
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
-  let registry = await registerProcessors(imports, importModule);
-  await runProcessors(linked, registry);
+  let registry = await registerProcessors(imports, loader);
+  await runProcessors(result.ast, linked, registry);
   return print(result.ast);
 }
 
 let source = `
-  @import 'foo'
-  @import 'bar'
-
-  @private _x, _y, _z
+  @import '../examples/custom-element.js';
 
   @customElement('foo-bar')
   class C extends HTMLElement {}
 `;
 
-expandMacros(source).then(console.log);
+expandMacros(source, __filename).then(console.log);
