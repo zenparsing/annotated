@@ -50,6 +50,10 @@ function linkAnnotations(ast, annotations) {
 
     let matching = [];
 
+    // TODO: What happens if we have a decorator right before }?
+    // Should we lock down more forcefully where these things
+    // can appear?
+
     while (node.start > annotation.end) {
       // Add annotations in reverse order
       matching.unshift(annotation);
@@ -98,6 +102,10 @@ function getMacroImports(list) {
   return modules;
 }
 
+function importExportTranslator(ast) {
+
+}
+
 async function registerProcessors(imports, loader) {
   let registry = new Registry();
   let api = new MacroAPI(registry);
@@ -112,6 +120,9 @@ async function registerProcessors(imports, loader) {
   }
 
   registry.define('import', node => api.removeNode(node));
+  registry.define(importExportTranslator);
+
+  registry.define('ignore', node => api.removeNode(node));
 
   return registry;
 }
@@ -134,13 +145,18 @@ async function runProcessors(root, list, registry) {
 }
 
 export async function expandMacros(source, options = {}) {
-  let loader = new Loader(options.location);
-  let result = parse(source, { module: true, addParentLinks: true });
+  let result = parse(source, {
+    module: true,
+    resolveScopes: true,
+    addParentLinks: true,
+  });
+
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
+  let loader = new Loader(options.location);
   let registry = await registerProcessors(imports, loader);
   await runProcessors(result.ast, linked, registry);
-  return print(result.ast);
+  return print(result.ast).output;
 }
 
 let source = `

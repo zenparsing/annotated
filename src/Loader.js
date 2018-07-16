@@ -4,6 +4,10 @@ export class Loader {
 
   // TODO: Should this be usable in the browser?
 
+  // TODO: We need to translate "import" and "export" as ESM does
+  // so that we can pick up all of the dependencies that we need
+  // to pick up.
+
   constructor(location) {
     if (!location) {
       location = process.cwd();
@@ -20,7 +24,7 @@ export class Loader {
 
   async load(specifier) {
     // TODO: Update for ESM modules
-    return require(await this.resolve(specifier));
+    return await require(await this.resolve(specifier));
   }
 
 }
