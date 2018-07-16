@@ -3,17 +3,33 @@
 MVP Goals:
 
 - Command line
-  - Translate file and write to stdout or file
   - Translate directory and write to an output directory
-  - Run code that expands macros
-    - This is fuzzy
-- API that mirrors the command line
-- Loader (require -r macros)
+  - Translate file and write to stdout or file
+- Loader (require -r annotated)
+- Bundler plugins
+  - Webpack
+  - Rollup
+  - Parcel
+- Source mapping
 
 Not MVP:
 
 - Helper library for doing transforms
-- Source maps
+- General purpose compile-to-JS toolchain
+
+Notes:
+
+- Translation is async, which will cause problems if we are wanting to run it
+  like a preloader
+- Source mapping for errors on Node is henious (see node-source-map-support)
+  but this seems to be a requirement for transparent runtime compilation.
+
+Compile-to-JS toolchain
+
+- Output AST
+- Output code generation
+- Source map generation
+- Node error stack mapping
 
 */
 
@@ -22,33 +38,6 @@ import { AST, parse, print } from './parser.js';
 import { Loader } from './Loader.js';
 import { Registry } from './Registry.js';
 import { MacroAPI } from './MacroAPI.js';
-
-function addToParentScope(node, newNode) {
-  let { parent } = node;
-  switch (parent.type) {
-    case 'Script':
-    case 'Module':
-    case 'Block':
-    case 'FunctionBody':
-      this.statements.push(newNode);
-      break;
-    default:
-      addToParentScope(parent, newNode);
-  }
-}
-
-function astString(node, output, indent) {
-  return JSON.stringify(node, (key, value) => {
-    switch (key) {
-      case 'start':
-      case 'end':
-      case 'parent':
-        return undefined;
-      default:
-        return value;
-    }
-  }, 2);
-}
 
 function linkAnnotations(ast, annotations) {
   let output = [];
@@ -136,13 +125,17 @@ async function runProcessors(root, list, registry) {
     }
   }
 
+  // TODO: Should we perform a single tree traversal and
+  // run "global" processors on every node? This would ensure
+  // a single traversal, rather than multiple traversals
+  // for each global processor.
   for (let processor of registry.globalMacros)
     await processor(root);
 }
 
-async function expandMacros(source, location) {
-  let loader = new Loader(location);
-  let result = parse(source, { addParentLinks: true });
+export async function expandMacros(source, options = {}) {
+  let loader = new Loader(options.location);
+  let result = parse(source, { module: true, addParentLinks: true });
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
   let registry = await registerProcessors(imports, loader);
@@ -151,10 +144,10 @@ async function expandMacros(source, location) {
 }
 
 let source = `
-  @import '../examples/custom-element.js';
+  @import '../examples/custom-element.js'
 
   @customElement('foo-bar')
   class C extends HTMLElement {}
 `;
 
-expandMacros(source, __filename).then(console.log);
+expandMacros(source).then(console.log);

@@ -1,15 +1,4 @@
 export function registerMacros(Macro) {
-  function defineStatement(annotation, ident) {
-    let node = Macro.template`
-      window.customElements.define(
-        ${ annotation.arguments[0] },
-        ${ ident },
-        ${ annotation.arguments[1] || { type: 'NullLiteral' } }
-      )
-    `;
-    return node.statements[0];
-  }
-
   Macro.define('customElement', (node, annotation) => {
     let classNode =
       node.type === 'ExportDefault' ? node.binding :
@@ -17,6 +6,9 @@ export function registerMacros(Macro) {
       node;
 
     Macro.validateNodeType(classNode, ['ClassExpression', 'ClassDeclaration']);
+
+    let specifier = annotation.arguments[0];
+    let options = annotation.arguments[1] || { type: 'NullLiteral' };
 
     if (classNode.type === 'ClassDeclaration') {
       // Add an identifier for default class exports
@@ -26,7 +18,13 @@ export function registerMacros(Macro) {
       // Insert a define statement after class definition
       Macro.insertStatementAfter(
         classNode,
-        defineStatement(annotation, classNode.identifier)
+        Macro.template`
+          window.customElements.define(
+            ${ specifier },
+            ${ classNode.identifier },
+            ${ options }
+          )
+        `.statements[0]
       );
     } else {
       // Create an identifier for the class expression
@@ -35,7 +33,11 @@ export function registerMacros(Macro) {
       // Wrap class definition in a sequence expression
       let wrapped = Macro.template`(
         ${ ident } = ${ classNode },
-        ${ defineStatement(annotation, ident).expression },
+        window.customElements.define(
+          ${ specifier },
+          ${ ident },
+          ${ options }
+        ),
         ${ ident }
       )`;
 
