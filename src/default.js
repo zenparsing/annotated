@@ -50,7 +50,7 @@ function linkAnnotations(ast, annotations) {
 
     let matching = [];
 
-    // TODO: What happens if we have an annotation right before }?
+    // TODO: What happens if we have a decorator right before }?
     // Should we lock down more forcefully where these things
     // can appear?
 
@@ -102,34 +102,37 @@ function getMacroImports(list) {
   return modules;
 }
 
-function registerProcessors(imports, loader) {
+function importExportTranslator(ast) {
+
+}
+
+async function registerProcessors(imports, loader) {
   let registry = new Registry();
   let api = new MacroAPI(registry);
 
   for (let specifier of imports) {
-    let module = loader.load(specifier);
+    let module = await loader.load(specifier);
     if (typeof module.registerMacros !== 'function') {
       throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
     }
 
-    module.registerMacros(api);
+    await module.registerMacros(api);
   }
 
   registry.define('import', node => api.removeNode(node));
+  registry.define(importExportTranslator);
 
-  registry.define(root => {
-    // Perform import/export translation (optionally?)
-  });
+  registry.define('ignore', node => api.removeNode(node));
 
   return registry;
 }
 
-function runProcessors(root, list, registry) {
+async function runProcessors(root, list, registry) {
   for (let { node, annotations } of list) {
     for (let annotation of annotations) {
       let name = annotation.path.map(ident => ident.value).join('.');
       let processor = registry.getNamedMacro(name);
-      processor(node, annotation);
+      await processor(node, annotation);
     }
   }
 
@@ -138,10 +141,10 @@ function runProcessors(root, list, registry) {
   // a single traversal, rather than multiple traversals
   // for each global processor.
   for (let processor of registry.globalMacros)
-    processor(root);
+    await processor(root);
 }
 
-export function expandMacros(source, options = {}) {
+export async function expandMacros(source, options = {}) {
   let result = parse(source, {
     module: true,
     resolveScopes: true,
@@ -151,8 +154,8 @@ export function expandMacros(source, options = {}) {
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
   let loader = new Loader(options.location);
-  let registry = registerProcessors(imports, loader);
-  runProcessors(result.ast, linked, registry);
+  let registry = await registerProcessors(imports, loader);
+  await runProcessors(result.ast, linked, registry);
   return print(result.ast).output;
 }
 
@@ -163,7 +166,4 @@ let source = `
   class C extends HTMLElement {}
 `;
 
-
-console.log(
-  expandMacros(source)
-);
+expandMacros(source).then(console.log);
