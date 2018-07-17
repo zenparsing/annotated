@@ -17,14 +17,14 @@ export class Loader {
     this._location = location;
   }
 
-  async resolve(specifier) {
+  resolve(specifier) {
     // TODO: Update for ESM module lookup rules
     return Module._resolveFilename(specifier, this._module, false, {});
   }
 
-  async load(specifier) {
+  load(specifier) {
     // TODO: Update for ESM modules
-    return await require(await this.resolve(specifier));
+    return require(this.resolve(specifier));
   }
 
 }
