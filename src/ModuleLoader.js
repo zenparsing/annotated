@@ -15,14 +15,14 @@ class ModuleLoader {
     this._location = location;
   }
 
-  async resolve(specifier) {
+  resolve(specifier) {
     return Module._resolveFilename(specifier, this._module, false, {});
   }
 
-  async load(specifier) {
+  load(specifier) {
     let done = startModuleTranslation();
     try {
-      return this._module.require(await this.resolve(specifier));
+      return this._module.require(this.resolve(specifier));
     } finally {
       done();
     }

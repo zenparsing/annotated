@@ -39,7 +39,7 @@ const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Twister } = require('./Twister.js');
 
-async function expandMacros(source, options = {}) {
+function expandMacros(source, options = {}) {
   let result = parse(source, {
     module: true,
     resolveScopes: true,
@@ -50,8 +50,8 @@ async function expandMacros(source, options = {}) {
   let imports = getMacroImports(linked);
   let loader = new ModuleLoader(options.location);
   let twister = new Twister(result);
-  let registry = await registerProcessors(imports, loader, twister);
-  await runProcessors(result.ast, linked, registry);
+  let registry = registerProcessors(imports, loader, twister);
+  runProcessors(result.ast, linked, registry);
   return print(result.ast).output;
 }
 
@@ -118,7 +118,7 @@ function getMacroImports(list) {
   return modules;
 }
 
-async function registerProcessors(imports, loader, api) {
+function registerProcessors(imports, loader, api) {
   let registry = new MacroRegistry();
 
   function define(name, processor) {
@@ -126,12 +126,12 @@ async function registerProcessors(imports, loader, api) {
   }
 
   for (let specifier of imports) {
-    let module = await loader.load(specifier);
+    let module = loader.load(specifier);
     if (typeof module.registerMacros !== 'function') {
       throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
     }
 
-    await module.registerMacros(define, api);
+    module.registerMacros(define, api);
   }
 
   define('import', node => api.removeNode(node));
@@ -139,12 +139,12 @@ async function registerProcessors(imports, loader, api) {
   return registry;
 }
 
-async function runProcessors(root, list, registry) {
+function runProcessors(root, list, registry) {
   for (let { node, annotations } of list) {
     for (let annotation of annotations) {
       let name = annotation.path.map(ident => ident.value).join('.');
       let processor = registry.getNamedMacro(name);
-      await processor(node, annotation);
+      processor(node, annotation);
     }
   }
 
@@ -153,14 +153,14 @@ async function runProcessors(root, list, registry) {
   // a single traversal, rather than multiple traversals
   // for each global processor.
   for (let processor of registry.globalMacros)
-    await processor(root);
+    processor(root);
 }
 
-expandMacros(`
+console.log(expandMacros(`
   @import '../examples/custom-element.js';
 
   @customElement('p-foo')
   class X extends HTMLElement {}
-`).then(console.log);
+`));
 
 module.exports = { expandMacros };
