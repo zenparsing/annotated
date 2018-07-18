@@ -1,5 +1,5 @@
-export function registerMacros(Macro) {
-  Macro.define('customElement', (node, annotation) => {
+export function registerMacros(define, Macro) {
+  define('customElement', (node, annotation) => {
     let classNode =
       node.type === 'ExportDefault' ? node.binding :
       node.type === 'ExportDeclaration' ? node.declaration :
@@ -18,30 +18,30 @@ export function registerMacros(Macro) {
       // Insert a define statement after class definition
       Macro.insertStatementAfter(
         classNode,
-        Macro.template`
+        Macro.statement`
           window.customElements.define(
             ${ specifier },
             ${ classNode.identifier },
             ${ options }
           )
-        `.statements[0]
+        `
       );
     } else {
       // Create an identifier for the class expression
       let ident = Macro.uniqueVariable('_class');
 
       // Wrap class definition in a sequence expression
-      let wrapped = Macro.template`(
-        ${ ident } = ${ classNode },
-        window.customElements.define(
-          ${ specifier },
-          ${ ident },
-          ${ options }
-        ),
-        ${ ident }
-      )`;
-
-      Macro.replaceNode(classNode, wrapped.statements[0].expression);
+      Macro.replaceNode(classNode, Macro.expression`
+        (
+          ${ ident } = ${ classNode },
+          window.customElements.define(
+            ${ specifier },
+            ${ ident },
+            ${ options }
+          ),
+          ${ ident }
+        )`
+      );
     }
   });
 }

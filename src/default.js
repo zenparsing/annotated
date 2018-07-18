@@ -34,10 +34,10 @@ Compile-to-JS toolchain
 */
 
 
-const { AST, parse, print } = require('./parser.js');
+const { parse, print } = require('./parser.js');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
-const { MacroAPI } = require('./MacroAPI.js');
+const { Twister } = require('./Twister.js');
 
 async function expandMacros(source, options = {}) {
   let result = parse(source, {
@@ -49,7 +49,8 @@ async function expandMacros(source, options = {}) {
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
   let loader = new ModuleLoader(options.location);
-  let registry = await registerProcessors(imports, loader);
+  let twister = new Twister(result);
+  let registry = await registerProcessors(imports, loader, twister);
   await runProcessors(result.ast, linked, registry);
   return print(result.ast).output;
 }
@@ -117,9 +118,12 @@ function getMacroImports(list) {
   return modules;
 }
 
-async function registerProcessors(imports, loader) {
+async function registerProcessors(imports, loader, api) {
   let registry = new MacroRegistry();
-  let api = new MacroAPI({ registry });
+
+  function define(name, processor) {
+    registry.define(name, processor);
+  }
 
   for (let specifier of imports) {
     let module = await loader.load(specifier);
@@ -127,10 +131,10 @@ async function registerProcessors(imports, loader) {
       throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
     }
 
-    await module.registerMacros(api);
+    await module.registerMacros(define, api);
   }
 
-  registry.define('import', node => api.removeNode(node));
+  define('import', node => api.removeNode(node));
 
   return registry;
 }
@@ -151,5 +155,12 @@ async function runProcessors(root, list, registry) {
   for (let processor of registry.globalMacros)
     await processor(root);
 }
+
+expandMacros(`
+  @import '../examples/custom-element.js';
+
+  @customElement('p-foo')
+  class X extends HTMLElement {}
+`).then(console.log);
 
 module.exports = { expandMacros };
