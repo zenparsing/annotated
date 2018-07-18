@@ -1,15 +1,10 @@
 import { parse } from './parser.js';
 
-export class MacroAPI {
+export class Twister {
 
-  constructor(options = {}) {
-    this._ast = options.ast;
-    this._registry = options.registry;
-    this._scopeTree = options.scopeTree;
-  }
-
-  define(name, processor) {
-    this._registry.define(name, processor);
+  constructor({ ast, scopeTree }) {
+    this._ast = ast;
+    this._scopeTree = scopeTree;
   }
 
   get ast() {
@@ -91,6 +86,14 @@ export class MacroAPI {
     throw new SyntaxError(`Invalid node ${ node.type }`);
   }
 
+  statement(literals, ...values) {
+    return this.template(literals, ...values).statements[0];
+  }
+
+  expression(literals, ...values) {
+    return this.template(literals, ...values).statements[0].expression;
+  }
+
   template(literals, ...values) {
     let source = '';
     for (let i = 0; i < literals.length; ++i) {
@@ -98,14 +101,13 @@ export class MacroAPI {
       if (i < values.length) source += '$$MACRO';
     }
 
-    let result = parse(source, { addParentLinks: true });
+    let result = parse(source, { module: true, addParentLinks: true });
     let index = 0;
-    let utils = this;
 
     this.visit(result.ast, {
-      Identifier(node) {
+      Identifier: node => {
         if (node.value === '$$MACRO') {
-          utils.replaceNode(node, values[index++]);
+          this.replaceNode(node, values[index++]);
         }
       }
     });

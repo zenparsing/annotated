@@ -5,7 +5,7 @@ function validateProcessor(p) {
   return p;
 }
 
-export class Registry {
+export class MacroRegistry {
   constructor() {
     this._namedMacros = new Map();
     this._globalMacros = [];

@@ -35,8 +35,8 @@ Compile-to-JS toolchain
 
 
 import { AST, parse, print } from './parser.js';
-import { Loader } from './Loader.js';
-import { Registry } from './Registry.js';
+import { MacroLoader } from './MacroLoader.js';
+import { MacroRegistry } from './MacroRegistry.js';
 import { MacroAPI } from './MacroAPI.js';
 
 function linkAnnotations(ast, annotations) {
@@ -50,7 +50,7 @@ function linkAnnotations(ast, annotations) {
 
     let matching = [];
 
-    // TODO: What happens if we have a decorator right before }?
+    // TODO: What happens if we have an annotation right before }?
     // Should we lock down more forcefully where these things
     // can appear?
 
@@ -107,8 +107,8 @@ function importExportTranslator(ast) {
 }
 
 async function registerProcessors(imports, loader) {
-  let registry = new Registry();
-  let api = new MacroAPI(registry);
+  let registry = new MacroRegistry();
+  let api = new MacroAPI({ registry });
 
   for (let specifier of imports) {
     let module = await loader.load(specifier);
@@ -121,8 +121,6 @@ async function registerProcessors(imports, loader) {
 
   registry.define('import', node => api.removeNode(node));
   registry.define(importExportTranslator);
-
-  registry.define('ignore', node => api.removeNode(node));
 
   return registry;
 }
@@ -153,7 +151,7 @@ export async function expandMacros(source, options = {}) {
 
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
-  let loader = new Loader(options.location);
+  let loader = new MacroLoader(options.location);
   let registry = await registerProcessors(imports, loader);
   await runProcessors(result.ast, linked, registry);
   return print(result.ast).output;
