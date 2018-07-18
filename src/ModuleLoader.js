@@ -1,7 +1,7 @@
 import Module from 'module';
 import { translateModule } from './ModuleTranslator.js';
 
-export class MacroLoader {
+export class ModuleLoader {
 
   // TODO: Should this be usable in the browser?
   // TODO: Use "new" module lookup rules?
@@ -40,8 +40,14 @@ function startModuleTranslation() {
   return () => { Module.prototype._compile = _compile };
 }
 
+function shouldTranslate(filename) {
+  return !/[\/\\]node_modules[\/\\]/i.test(filename);
+}
+
 function compileOverride(content, filename) {
-  content = translateModule(removeShebang(content));
+  if (shouldTranslate(filename)) {
+    content = translateModule(removeShebang(content));
+  }
   return _compile.call(this, content, filename);
 }
 

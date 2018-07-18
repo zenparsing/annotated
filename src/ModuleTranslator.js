@@ -2,23 +2,11 @@ import { parse, print } from './parser.js';
 import { Twister } from './Twister.js';
 
 export function translateModule(source) {
-  let parseResult = parse(source, {
-    module: true,
-    addParentLinks: true,
-    resolveScopes: true,
-  });
-
-  ImportExportVisitor.process(parse(`
-    import x from 'foo';
-    export default function() {}
-    export y from 'bar';
-  `, {
+  return ImportExportVisitor.process(parse(source, {
     module: true,
     addParentLinks: true,
     resolveScopes: true,
   }));
-
-  return source;
 }
 
 class ImportExportVisitor {
@@ -37,7 +25,7 @@ class ImportExportVisitor {
 
   process() {
     this.visit(this.twister.ast);
-    console.log(print(this.twister.ast).output);
+    return print(this.twister.ast);
   }
 
   visit(node) {
@@ -65,9 +53,23 @@ class ImportExportVisitor {
       this.visit(node.statements[i]);
     }
 
-    let statements = [this.twister.statement`"use strict"`];
+    let statements = [this.twister.statement`'use strict'`];
 
     for (let { names, from, exporting } of this.imports) {
+      if (exporting && names.length === 1) {
+        let { imported, local } = names[0];
+        if (imported) {
+          statements.push(this.twister.statement`
+            exports.${ local } = require(${ from }).${ imported }
+          `);
+        } else {
+          statements.push(this.twister.statement`
+            exports.${ local } = require(${ from })
+          `);
+        }
+        continue;
+      }
+
       let ident = this.moduleIdentifier(from.value);
 
       statements.push(this.twister.statement`
@@ -76,9 +78,15 @@ class ImportExportVisitor {
 
       for (let { imported, local } of names) {
         if (exporting) {
-          statements.push(this.twister.statement`
-            exports.${ imported } = ${ ident }.${ local }
-          `);
+          if (imported) {
+            statements.push(this.twister.statement`
+              exports.${ local } = ${ ident }.${ imported }
+            `);
+          } else {
+            statements.push(this.twister.statement`
+              exports.${ local } = ${ ident }
+            `);
+          }
         } else {
           statements.push(this.twister.statement`
             const ${ local } = ${ ident }.${ imported }
@@ -95,7 +103,11 @@ class ImportExportVisitor {
     }
 
     for (let node of this.replacements) {
-      if (node) statements.push(node);
+      if (Array.isArray(node)) {
+        node.forEach(n => statements.push(n));
+      } else {
+        statements.push(node);
+      }
     }
 
     node.statements = statements;
@@ -134,19 +146,70 @@ class ImportExportVisitor {
 
   NamespaceImport(node) {
     this.topImport.names.push({
-      imported: '*',
+      imported: null,
       local: node.identifier,
     });
   }
 
+  getPatternDeclarations(node, list) {
+    switch (node.type) {
+      case 'VariableDeclaration':
+        node.declarations.forEach(c => this.getPatternDeclarations(c, list));
+        break;
+      case 'VariableDeclarator':
+        this.getPatternDeclarations(node.pattern, list);
+        break;
+      case 'Identifier':
+        list.push(node);
+        break;
+      case 'ObjectPattern':
+        node.properties.forEach(p =>
+          this.getPatternDeclarations(p.pattern || p.name, list)
+        )
+        break;
+      case 'ArrayPattern':
+        node.elements.forEach(
+          p => this.getPatternDeclarations(p.pattern, list)
+        );
+        break;
+    }
+  }
+
   ExportDeclaration(node) {
-    let ident = node.declaration.identifier;
-    this.exports.push({
-      local: ident,
-      exported: ident,
-      hoist: true,
-    });
-    this.replaceWith(node.declaration);
+    let { declaration } = node;
+    if (declaration.type === 'VariableDeclaration') {
+      let statements = [declaration];
+      let bindings = [];
+      this.getPatternDeclarations(declaration, bindings);
+      for (let ident of bindings) {
+        this.exports.push({
+          local: ident,
+          exported: ident,
+          hoist: false,
+        });
+        statements.push(this.twister.statement`
+          exports.${ ident } = ${ ident }
+        `);
+      }
+      this.replaceWith(statements);
+    } else {
+      let ident = declaration.identifier;
+      let exportName = {
+        local: ident,
+        exported: ident,
+        hoist: false,
+      };
+      if (declaration.type === 'FunctionDeclaration') {
+        exportName.hoist = true;
+        this.replaceWith(declaration);
+      } else {
+        this.replaceWith([
+          declaration,
+          this.twister.statement`exports.${ ident } = ${ ident }`,
+        ]);
+      }
+      this.exports.push(exportName);
+    }
   }
 
   ExportNameList(node) {
@@ -154,39 +217,63 @@ class ImportExportVisitor {
       let reexport = { names: [], from: node.from, exporting: true };
       for (let child of node.specifiers) {
         reexport.names.push({
-          local: child.local,
-          exported: child.exported ? child.exported : child.local,
+          imported: child.local,
+          local: child.exported ? child.exported : child.local,
         });
       }
       this.imports.push(reexport);
+      this.replaceWith(null);
     } else {
+      let statements = [];
       for (let child of node.specifiers) {
-        this.exports.push({
+        let name = {
           local: child.local,
           exported: child.exported ? child.exported : child.local,
           hoist: false,
-        });
+        };
+
+        this.exports.push(name);
+
+        statements.push(this.twister.statement`
+          exports.${ name.exported } = ${ name.local }
+        `);
       }
+      this.replaceWith(statements);
     }
-    this.replaceWith(null);
   }
 
   ExportDefault(node) {
     let { binding } = node;
+
     if (binding.type === 'FunctionDeclaration' || binding.type === 'ClassDeclaration') {
+
       if (!binding.identifier) {
         binding.identifier = {
           type: 'Identifier',
           value: '__default', // TODO: uniquify
         };
       }
-      this.exports.push({
+
+      let exportName = {
         local: binding.identifier,
         exported: { type: 'Identifier', value: 'default' },
-        hoist: true,
-      });
-      this.replaceWith(binding);
+        hoist: false,
+      };
+
+      if (binding.type === 'FunctionDeclaration') {
+        exportName.hoist = true;
+        this.replaceWith(binding);
+      } else {
+        this.replaceWith([
+          binding,
+          this.twister.statement`exports.default = ${ binding.identifier }`,
+        ]);
+      }
+
+      this.exports.push(exportName);
+
     } else {
+
       this.exports.push({
         local: null,
         exported: { type: 'Identifier', value: 'default' },
@@ -195,14 +282,15 @@ class ImportExportVisitor {
       this.replaceWith(this.twister.statement`
         exports.default = ${ node.binding };
       `);
+
     }
   }
 
   ExportNamespace(node) {
     this.imports.push({
       names: [{
-        local: '*',
-        exported: node.identifier,
+        imported: null,
+        local: node.identifier,
       }],
       from: node.from,
       exporting: true,
@@ -213,8 +301,8 @@ class ImportExportVisitor {
   ExportDefaultFrom(node) {
     this.imports.push({
       names: [{
-        local: { type: 'Identifier', value: 'default' },
-        exported: node.identifier,
+        imported: { type: 'Identifier', value: 'default' },
+        local: node.identifier,
       }],
       from: node.from,
       exporting: true,

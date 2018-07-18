@@ -32,7 +32,7 @@ function toVLQSigned(v) {
   return v < 0 ? ((-v) << 1) + 1 : (v << 1) + 0;
 }
 
-export function encodeVLQ(v) {
+function encodeVLQ(v) {
   let more = toVLQSigned(v);
   let encoded = '';
 

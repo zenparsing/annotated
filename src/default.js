@@ -35,7 +35,7 @@ Compile-to-JS toolchain
 
 
 import { AST, parse, print } from './parser.js';
-import { MacroLoader } from './MacroLoader.js';
+import { ModuleLoader } from './ModuleLoader.js';
 import { MacroRegistry } from './MacroRegistry.js';
 import { MacroAPI } from './MacroAPI.js';
 
@@ -151,7 +151,7 @@ export async function expandMacros(source, options = {}) {
 
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
-  let loader = new MacroLoader(options.location);
+  let loader = new ModuleLoader(options.location);
   let registry = await registerProcessors(imports, loader);
   await runProcessors(result.ast, linked, registry);
   return print(result.ast).output;
