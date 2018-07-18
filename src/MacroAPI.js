@@ -1,6 +1,6 @@
-import { parse } from './parser.js';
+const { parse } = require('./parser.js');
 
-export class MacroAPI {
+class MacroAPI {
 
   constructor(options = {}) {
     this._ast = options.ast;
@@ -114,3 +114,5 @@ export class MacroAPI {
   }
 
 }
+
+module.exports = { MacroAPI };

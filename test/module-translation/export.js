@@ -1,4 +1,4 @@
-import { test } from './helpers.js';
+const { test } = require('./helpers.js');
 
 test('export default from', `
   export x from 'a';

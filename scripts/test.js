@@ -1,4 +1,3 @@
-const load = require('esm')(module);
 const fs = require('fs');
 const path = require('path');
 
@@ -13,4 +12,4 @@ function visitFiles(dir, cb) {
   }
 }
 
-visitFiles('../test', load);
+visitFiles('../test', require);

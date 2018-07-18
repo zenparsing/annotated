@@ -1,4 +1,4 @@
-module.exports = require('esm')(module)('./src/default.js');
+module.exports = require('./src/default.js');
 
 function isNodePreload() {
   try {

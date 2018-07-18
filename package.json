@@ -1,6 +1,4 @@
 {
   "module": "src/default.js",
-  "dependencies": {
-    "esm": "^3.0.65"
-  }
+  "dependencies": {}
 }

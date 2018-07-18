@@ -1,4 +1,4 @@
-export function generateSourceMap(mappings, options = {}) {
+function generateSourceMap(mappings, options = {}) {
   let names = new Map();
   let sources = new Map();
   let encodedMappings = serializeMappings(mappings, names, sources);
@@ -124,3 +124,5 @@ function serializeMappings(mappings, sources, names) {
 
   return result;
 }
+
+module.exports = { generateSourceMap };

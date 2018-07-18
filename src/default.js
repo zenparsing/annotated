@@ -34,10 +34,25 @@ Compile-to-JS toolchain
 */
 
 
-import { AST, parse, print } from './parser.js';
-import { ModuleLoader } from './ModuleLoader.js';
-import { MacroRegistry } from './MacroRegistry.js';
-import { MacroAPI } from './MacroAPI.js';
+const { AST, parse, print } = require('./parser.js');
+const { ModuleLoader } = require('./ModuleLoader.js');
+const { MacroRegistry } = require('./MacroRegistry.js');
+const { MacroAPI } = require('./MacroAPI.js');
+
+async function expandMacros(source, options = {}) {
+  let result = parse(source, {
+    module: true,
+    resolveScopes: true,
+    addParentLinks: true,
+  });
+
+  let linked = linkAnnotations(result.ast, result.annotations);
+  let imports = getMacroImports(linked);
+  let loader = new ModuleLoader(options.location);
+  let registry = await registerProcessors(imports, loader);
+  await runProcessors(result.ast, linked, registry);
+  return print(result.ast).output;
+}
 
 function linkAnnotations(ast, annotations) {
   let output = [];
@@ -102,10 +117,6 @@ function getMacroImports(list) {
   return modules;
 }
 
-function importExportTranslator(ast) {
-
-}
-
 async function registerProcessors(imports, loader) {
   let registry = new MacroRegistry();
   let api = new MacroAPI({ registry });
@@ -120,7 +131,6 @@ async function registerProcessors(imports, loader) {
   }
 
   registry.define('import', node => api.removeNode(node));
-  registry.define(importExportTranslator);
 
   return registry;
 }
@@ -142,26 +152,4 @@ async function runProcessors(root, list, registry) {
     await processor(root);
 }
 
-export async function expandMacros(source, options = {}) {
-  let result = parse(source, {
-    module: true,
-    resolveScopes: true,
-    addParentLinks: true,
-  });
-
-  let linked = linkAnnotations(result.ast, result.annotations);
-  let imports = getMacroImports(linked);
-  let loader = new ModuleLoader(options.location);
-  let registry = await registerProcessors(imports, loader);
-  await runProcessors(result.ast, linked, registry);
-  return print(result.ast).output;
-}
-
-let source = `
-  @import '../examples/custom-element.js'
-
-  @customElement('foo-bar')
-  class C extends HTMLElement {}
-`;
-
-expandMacros(source).then(console.log);
+module.exports = { expandMacros };

@@ -1,6 +1,6 @@
-import { parse } from './parser.js';
+const { parse } = require('./parser.js');
 
-export class Twister {
+class Twister {
 
   constructor({ ast, scopeTree }) {
     this._ast = ast;
@@ -116,3 +116,5 @@ export class Twister {
   }
 
 }
+
+module.exports = { Twister };

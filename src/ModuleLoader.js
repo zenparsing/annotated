@@ -1,7 +1,7 @@
-import Module from 'module';
-import { translateModule } from './ModuleTranslator.js';
+const Module = require('module');
+const { translateModule } = require('./ModuleTranslator.js');
 
-export class ModuleLoader {
+class ModuleLoader {
 
   // TODO: Should this be usable in the browser?
   // TODO: Use "new" module lookup rules?
@@ -55,3 +55,5 @@ function removeShebang(content) {
   let match = content.startsWith('#!') && /[\r\n]/.exec(content);
   return match ? content.slice(match.index) : content;
 }
+
+module.exports = { ModuleLoader };

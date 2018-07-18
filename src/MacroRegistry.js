@@ -5,7 +5,7 @@ function validateProcessor(p) {
   return p;
 }
 
-export class MacroRegistry {
+class MacroRegistry {
   constructor() {
     this._namedMacros = new Map();
     this._globalMacros = [];
@@ -31,3 +31,5 @@ export class MacroRegistry {
     return this._namedMacros.get(name);
   }
 }
+
+module.exports = { MacroRegistry };

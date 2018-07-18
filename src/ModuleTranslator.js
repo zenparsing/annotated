@@ -1,7 +1,7 @@
-import { parse, print } from './parser.js';
-import { Twister } from './Twister.js';
+const { parse, print } = require('./parser.js');
+const { Twister } = require('./Twister.js');
 
-export function translateModule(source) {
+function translateModule(source) {
   return ImportExportVisitor.process(parse(source, {
     module: true,
     addParentLinks: true,
@@ -311,3 +311,5 @@ class ImportExportVisitor {
   }
 
 }
+
+module.exports = { translateModule };

@@ -1,1 +1,1 @@
-export * from '../../esparse';
+module.exports = require('../../esparse');

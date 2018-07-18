@@ -1,11 +1,11 @@
-import { translateModule } from '../../src/ModuleTranslator.js';
-import assert from 'assert';
+const { translateModule } = require('../../src/ModuleTranslator.js');
+const assert = require('assert');
 
 function normalize(code) {
   return code.trim().replace(/\n[ ]+/g, '\n');
 }
 
-export function test(name, input, expected) {
+function test(name, input, expected) {
   expected = normalize(expected);
   let raw = translateModule(input).output;
   let actual = normalize(raw);
@@ -14,3 +14,5 @@ export function test(name, input, expected) {
   }
   assert.equal(actual, expected, name);
 }
+
+module.exports = { test };
