@@ -1,0 +1,133 @@
+const { expandMacros } = require('./MacroExpander.js');
+const fs = require('fs');
+const path = require('path');
+
+function getStat(p) {
+  return new Promise((resolve, reject) => {
+    fs.stat(p, (err, stat) => {
+      if (err) reject(err);
+      else resolve(stat);
+    });
+  });
+}
+
+async function listFolder(p) {
+  return new Promise((resolve, reject) => {
+    fs.readdir(p, (err, names) => {
+      if (err) reject(err);
+      else resolve(names);
+    });
+  }).then(names => {
+    return Promise.all(names.map(name => {
+      let fullPath = path.join(p, name);
+      return getStat(fullPath).then(stat => {
+        return { name, path: fullPath, directory: stat.isDirectory() };
+      });
+    }));
+  });
+}
+
+function createFolder(p) {
+  function create() {
+    return new Promise((resolve, reject) => {
+      let mode = 0o777 & (~process.umask());
+      fs.mkdir(p, mode, err => {
+        if (err) reject(err);
+        else resolve(p);
+      });
+    });
+  }
+
+  return create().catch(err => {
+    if (err.code === 'ENOENT') {
+      return createFolder(path.dirname(p)).then(create);
+    }
+    throw err;
+  }).catch(err => {
+    return getStat(p).then(stat => {
+      if (stat.isDirectory()) {
+        return p;
+      }
+      throw err;
+    }, () => {
+      throw err;
+    });
+  });
+}
+
+function readInput(path) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, 'utf8', (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  });
+}
+
+function writeOutput(path, content) {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(path, content, err => {
+      if (err) reject(err);
+      else resolve(path);
+    });
+  });
+}
+
+// TODO: optionally output source maps
+// TODO: optionally bundle
+
+async function expandFileToString(inPath, options = {}) {
+  inPath = path.resolve(inPath);
+  let source = await readInput(inPath);
+  let result = expandMacros(source, {
+    location: inPath,
+    translateModules: options.translateModules,
+  });
+  return result.output;
+}
+
+async function expandFile(inPath, outPath, options = {}) {
+  inPath = path.resolve(inPath);
+  outPath = path.resolve(outPath);
+
+  if (inPath === outPath) {
+    throw new Error('Input path and output path are identical');
+  }
+
+  if (options.createFolder) {
+    await createFolder(path.dirname(outPath));
+  }
+
+  let source = await readInput(inPath);
+  let result = expandMacros(source, {
+    location: inPath,
+    translateModules: options.translateModules,
+  });
+
+  await writeOutput(outPath, result.output);
+}
+
+async function expandFolder(inPath, outPath, options = {}) {
+  inPath = path.resolve(inPath);
+  outPath = path.resolve(outPath);
+
+  if (inPath === outPath) {
+    throw new Error('Input path and output path are identical');
+  }
+
+  let entries = await listFolder(inPath);
+  await createFolder(outPath);
+
+  for (let entry of entries) {
+    if (entry.directory) {
+      await expandFolder(entry.path, path.join(outPath, entry.name), options);
+    } else {
+      let fileOptions = Object.assign({}, options, {
+        createFolder: false,
+      });
+      await expandFile(entry.path, path.join(outPath, entry.name), fileOptions);
+    }
+  }
+}
+
+module.exports = { expandFileToString, expandFile, expandFolder };
