@@ -69,27 +69,37 @@ class ImportExportVisitor {
       `);
 
       for (let { imported, local } of names) {
+        let statement;
+
         if (exporting) {
           if (imported) {
-            statements.push(this.twister.statement`
+            statement = this.twister.statement`
               exports.${ local } = ${ ident }.${ imported }
-            `);
+            `;
           } else {
-            statements.push(this.twister.statement`
+            statement = this.twister.statement`
               exports.${ local } = ${ ident }
-            `);
+            `;
           }
         } else {
           if (imported) {
-            statements.push(this.twister.statement`
-              const ${ local } = ${ ident }.${ imported }
-            `);
+            if (imported.value === 'default') {
+              statement = this.twister.statement`
+                const ${ local } = typeof ${ ident } === 'function' ? ${ ident } : ${ ident }.default
+              `;
+            } else {
+              statement = this.twister.statement`
+                const ${ local } = ${ ident }.${ imported }
+              `;
+            }
           } else {
-            statements.push(this.twister.statement`
+            statement = this.twister.statement`
               const ${ local } = ${ ident }
-            `);
+            `;
           }
         }
+
+        statements.push(statement);
       }
     }
 

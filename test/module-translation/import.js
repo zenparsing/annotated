@@ -5,7 +5,7 @@ test('import default', `
 `, `
   'use strict';
   const _a = require('a');
-  const x = _a.default;
+  const x = typeof _a === 'function' ? _a : _a.default;
 `);
 
 test('import names', `
