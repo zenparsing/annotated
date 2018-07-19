@@ -10,8 +10,8 @@ function generateSourceMap(mappings, options = {}) {
     mappings: encodedMappings,
   };
 
-  options.file && map.file = options.file;
-  options.sourceRoot && map.sourceRoot = options.sourceRoot;
+  options.file && (map.file = options.file);
+  options.sourceRoot && (map.sourceRoot = options.sourceRoot);
 
   if (options.contents) {
     map.sourcesContent = [...sources.keys()].map(source => {
