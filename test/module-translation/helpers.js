@@ -1,18 +1,16 @@
-const { translateModule } = require('../../src/ModuleTranslator.js');
-const assert = require('assert');
+import { expandMacros } from '../../src/default.js';
+import * as assert from 'assert';
 
 function normalize(code) {
   return code.trim().replace(/\n[ ]+/g, '\n');
 }
 
-function test(name, input, expected) {
+export function test(name, input, expected) {
   expected = normalize(expected);
-  let raw = translateModule(input).output;
+  let raw = expandMacros(input, { translateModules: true }).output;
   let actual = normalize(raw);
   if (expected !== actual) {
     console.log(raw);
   }
   assert.equal(actual, expected, name);
 }
-
-module.exports = { test };

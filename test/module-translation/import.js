@@ -1,4 +1,4 @@
-const { test } = require('./helpers.js');
+import { test } from './helpers.js';
 
 test('import default', `
   import x from 'a';

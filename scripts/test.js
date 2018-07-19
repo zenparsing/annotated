@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { registerLoader } = require('../');
+
+registerLoader();
 
 function visitFiles(dir, cb) {
   dir = path.resolve(__dirname, dir);

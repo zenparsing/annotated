@@ -80,9 +80,15 @@ class ImportExportVisitor {
             `);
           }
         } else {
-          statements.push(this.twister.statement`
-            const ${ local } = ${ ident }.${ imported }
-          `);
+          if (imported) {
+            statements.push(this.twister.statement`
+              const ${ local } = ${ ident }.${ imported }
+            `);
+          } else {
+            statements.push(this.twister.statement`
+              const ${ local } = ${ ident }
+            `);
+          }
         }
       }
     }

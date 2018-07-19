@@ -9,5 +9,7 @@ function isNodePreload() {
 }
 
 if (isNodePreload()) {
+  // TODO: Should we attempt to translate stuff in the REPL
+  // or expressions on the command line?
   module.exports.registerLoader();
 }

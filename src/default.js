@@ -38,7 +38,7 @@ const { parse, print } = require('./parser.js');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Twister } = require('./Twister.js');
-const moduleTranslator = require('./ModuleTranslator.js');
+const ModuleTranslator = require('./ModuleTranslator.js');
 
 ModuleLoader.translate = source => expandMacros(source, {
   translateModules: true,
@@ -148,7 +148,7 @@ function registerProcessors(imports, loader, api, translateModules) {
   define('import', node => api.removeNode(node));
 
   if (translateModules) {
-    moduleTranslator.registerMacros(define, api);
+    ModuleTranslator.registerMacros(define, api);
   }
 
   return registry;
@@ -171,11 +171,13 @@ function runProcessors(root, list, registry) {
     processor(root);
 }
 
+/*
 console.log(expandMacros(`
   @import '../examples/custom-element.js';
 
   @customElement('p-foo')
   class X extends HTMLElement {}
 `).output);
+*/
 
 module.exports = { expandMacros, registerLoader };
