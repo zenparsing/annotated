@@ -1,5 +1,8 @@
 const Module = require('module');
-const { translateModule } = require('./ModuleTranslator.js');
+
+let translate = source => ({
+  output: source,
+});
 
 class ModuleLoader {
 
@@ -28,6 +31,18 @@ class ModuleLoader {
     }
   }
 
+  static get translate() {
+    return translate;
+  }
+
+  static set translate(value) {
+    translate = value;
+  }
+
+  static startTranslation() {
+    return startModuleTranslation();
+  }
+
 }
 
 const { _compile } = Module.prototype;
@@ -46,7 +61,7 @@ function shouldTranslate(filename) {
 
 function compileOverride(content, filename) {
   if (shouldTranslate(filename)) {
-    content = translateModule(removeShebang(content)).output;
+    content = translate(removeShebang(content)).output;
   }
   return _compile.call(this, content, filename);
 }

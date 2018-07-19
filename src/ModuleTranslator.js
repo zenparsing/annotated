@@ -1,17 +1,10 @@
-const { parse, print } = require('./parser.js');
-const { Twister } = require('./Twister.js');
-
-function translateModule(source) {
-  return ImportExportVisitor.process(parse(source, {
-    module: true,
-    addParentLinks: true,
-    resolveScopes: true,
-  }));
+function registerMacros(define, twister) {
+  define(() => ImportExportVisitor.process(twister));
 }
 
 class ImportExportVisitor {
-  constructor(parseResult) {
-    this.twister = new Twister(parseResult);
+  constructor(twister) {
+    this.twister = twister;
     this.reexports = [];
     this.exports = [];
     this.imports = [];
@@ -19,13 +12,12 @@ class ImportExportVisitor {
     this.index = 0;
   }
 
-  static process(parseResult) {
-    return new this(parseResult).process();
+  static process(twister) {
+    return new this(twister).process();
   }
 
   process() {
     this.visit(this.twister.ast);
-    return print(this.twister.ast);
   }
 
   visit(node) {
@@ -312,4 +304,4 @@ class ImportExportVisitor {
 
 }
 
-module.exports = { translateModule };
+module.exports = { registerMacros };

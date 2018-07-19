@@ -7,3 +7,7 @@ function isNodePreload() {
     return false;
   }
 }
+
+if (isNodePreload()) {
+  module.exports.registerLoader();
+}

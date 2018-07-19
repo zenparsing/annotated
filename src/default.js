@@ -38,6 +38,15 @@ const { parse, print } = require('./parser.js');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Twister } = require('./Twister.js');
+const moduleTranslator = require('./ModuleTranslator.js');
+
+ModuleLoader.translate = source => expandMacros(source, {
+  translateModules: true,
+});
+
+function registerLoader(location) {
+  return ModuleLoader.startTranslation();
+}
 
 function expandMacros(source, options = {}) {
   let result = parse(source, {
@@ -50,9 +59,11 @@ function expandMacros(source, options = {}) {
   let imports = getMacroImports(linked);
   let loader = new ModuleLoader(options.location);
   let twister = new Twister(result);
-  let registry = registerProcessors(imports, loader, twister);
+  let registry = registerProcessors(imports, loader, twister, options.translateModules);
+
   runProcessors(result.ast, linked, registry);
-  return print(result.ast).output;
+
+  return print(result.ast);
 }
 
 function linkAnnotations(ast, annotations) {
@@ -118,7 +129,7 @@ function getMacroImports(list) {
   return modules;
 }
 
-function registerProcessors(imports, loader, api) {
+function registerProcessors(imports, loader, api, translateModules) {
   let registry = new MacroRegistry();
 
   function define(name, processor) {
@@ -135,6 +146,10 @@ function registerProcessors(imports, loader, api) {
   }
 
   define('import', node => api.removeNode(node));
+
+  if (translateModules) {
+    moduleTranslator.registerMacros(define, api);
+  }
 
   return registry;
 }
@@ -161,6 +176,6 @@ console.log(expandMacros(`
 
   @customElement('p-foo')
   class X extends HTMLElement {}
-`));
+`).output);
 
-module.exports = { expandMacros };
+module.exports = { expandMacros, registerLoader };

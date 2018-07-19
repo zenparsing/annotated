@@ -1,11 +1,11 @@
-export function registerMacros(define, Macro) {
+export function registerMacros(define, api) {
   define('customElement', (node, annotation) => {
     let classNode =
       node.type === 'ExportDefault' ? node.binding :
       node.type === 'ExportDeclaration' ? node.declaration :
       node;
 
-    Macro.validateNodeType(classNode, ['ClassExpression', 'ClassDeclaration']);
+    api.validateNodeType(classNode, ['ClassExpression', 'ClassDeclaration']);
 
     let specifier = annotation.arguments[0];
     let options = annotation.arguments[1] || { type: 'NullLiteral' };
@@ -13,12 +13,12 @@ export function registerMacros(define, Macro) {
     if (classNode.type === 'ClassDeclaration') {
       // Add an identifier for default class exports
       if (!classNode.identifier) {
-        classNode.identifier = Macro.uniqueIdentifier('_class');
+        classNode.identifier = api.uniqueIdentifier('_class');
       }
       // Insert a define statement after class definition
-      Macro.insertStatementAfter(
+      api.insertStatementAfter(
         classNode,
-        Macro.statement`
+        api.statement`
           window.customElements.define(
             ${ specifier },
             ${ classNode.identifier },
@@ -28,10 +28,10 @@ export function registerMacros(define, Macro) {
       );
     } else {
       // Create an identifier for the class expression
-      let ident = Macro.uniqueVariable('_class');
+      let ident = api.uniqueVariable('_class');
 
       // Wrap class definition in a sequence expression
-      Macro.replaceNode(classNode, Macro.expression`
+      api.replaceNode(classNode, api.expression`
         (
           ${ ident } = ${ classNode },
           window.customElements.define(
