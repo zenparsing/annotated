@@ -1,6 +1,14 @@
 {
+  "name": "annotated",
+  "version": "0.1.0",
   "bin": {
     "annotated": "./bin/annotated.js"
   },
-  "dependencies": {}
+  "main": "./dist/annotated.js",
+  "dependencies": {},
+  "devDependencies": {
+    "rollup": "^0.63.2",
+    "rollup-plugin-commonjs": "^9.1.3",
+    "rollup-plugin-node-resolve": "^3.3.0"
+  }
 }

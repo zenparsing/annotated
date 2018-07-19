@@ -25,16 +25,22 @@ function parseArgs() {
 }
 
 function fail(msg) {
-  console.log(msg);
+  console.log(typeof msg === 'string' ? new Error(msg) : msg);
   process.exit(1);
 }
 
 function run() {
   let args = parseArgs();
-  let inPath = path.resolve(args[0]);
+  let inPath = args.length > 0 ? args[0].trim() : null;
   let outPath = null;
   let folder = false;
   let options = { createFolder: true };
+
+  if (!inPath) {
+    fail('Missing input path');
+  }
+
+  inPath = path.resolve(inPath);
 
   try {
     folder = fs.statSync(inPath).isDirectory();
