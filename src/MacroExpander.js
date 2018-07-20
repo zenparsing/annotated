@@ -19,11 +19,16 @@ function expandMacros(source, options = {}) {
     addParentLinks: true,
   });
 
+  let macros = [];
+  if (options.translateModules) {
+    macros.push(ModuleTranslator);
+  }
+
   let linked = linkAnnotations(result.ast, result.annotations);
   let imports = getMacroImports(linked);
   let loader = new ModuleLoader(options.location);
   let twister = new Twister(result);
-  let registry = registerProcessors(imports, loader, twister, options.translateModules);
+  let registry = registerProcessors(imports, loader, twister, macros);
 
   runProcessors(result.ast, linked, registry);
 
@@ -36,10 +41,15 @@ function linkAnnotations(ast, annotations) {
   let annotation = iterator.next().value;
 
   function visit(node) {
-    if (!annotation)
+    if (!annotation) {
       return node;
+    }
 
     let matching = [];
+
+    // TODO: Currently annotations can appear as the last
+    // item in a statement list or class body; in that
+    // case the annotation will not be linked correctly
 
     while (node.start > annotation.end) {
       // Add annotations in reverse order
@@ -50,8 +60,9 @@ function linkAnnotations(ast, annotations) {
 
     node.children().forEach(visit);
 
-    if (matching.length > 0)
+    if (matching.length > 0) {
       output.push({ node, annotations: matching });
+    }
   }
 
   visit(ast);
@@ -89,7 +100,7 @@ function getMacroImports(list) {
   return modules;
 }
 
-function registerProcessors(imports, loader, api, translateModules) {
+function registerProcessors(imports, loader, api, macros) {
   let registry = new MacroRegistry();
 
   function define(name, processor) {
@@ -107,8 +118,8 @@ function registerProcessors(imports, loader, api, translateModules) {
 
   define('import', node => api.removeNode(node));
 
-  if (translateModules) {
-    ModuleTranslator.registerMacros(define, api);
+  for (let module of macros) {
+    module.registerMacros(define, api);
   }
 
   return registry;
