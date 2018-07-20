@@ -1,4 +1,5 @@
 const { expandMacros } = require('./MacroExpander.js');
+const { generateSourceMap } = require('./SourceMap.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -101,15 +102,20 @@ async function expandFile(inPath, outPath, options = {}) {
     translateModules: options.translateModules,
   });
 
-  // TODO: If options.sourceMap then create a source map file
-  // Allow further option to create it inline. Should we supply
-  // those options to expandMacro?
+  if (options.sourceMap) {
+    // TODO: Allow inline source maps?
+    let file = path.basename(outPath);
+    let sourceMap = generateSourceMap(result.mappings, {
+      file,
+      // TODO: Name should be different
+      sources: [{ name: file, content: source, default: true }],
+    });
+
+    await writeOutput(outPath + '.map', JSON.stringify(sourceMap));
+    result.output += `\n\n//# sourceMappingURL=${ file }.map`;
+  }
 
   await writeOutput(outPath, result.output);
-
-  if (options.sourceMap) {
-    throw new Error('Not implemented');
-  }
 }
 
 async function expandFolder(inPath, outPath, options = {}) {

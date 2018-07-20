@@ -58,6 +58,10 @@ function run() {
       case '-m':
         options.translateModules = true;
         break;
+      case '--sourcemaps':
+      case '-s':
+        options.sourceMap = value || true;
+        break;
     }
   }
 

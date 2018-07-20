@@ -27,7 +27,7 @@ function expandMacros(source, options = {}) {
 
   runProcessors(result.ast, linked, registry);
 
-  return print(result.ast);
+  return print(result.ast, { lineMap: result.lineMap });
 }
 
 function linkAnnotations(ast, annotations) {

@@ -7,10 +7,10 @@ function normalize(code) {
 
 export function test(name, input, expected) {
   expected = normalize(expected);
-  let raw = expandMacros(input, { translateModules: true }).output;
-  let actual = normalize(raw);
+  let result = expandMacros(input, { translateModules: true });
+  let actual = normalize(result.output);
   if (expected !== actual) {
-    console.log(raw);
+    console.log(result.output);
   }
   assert.equal(actual, expected, name);
 }

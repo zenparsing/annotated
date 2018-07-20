@@ -1,7 +1,20 @@
 function generateSourceMap(mappings, options = {}) {
+  let sourceData = new Map();
+  let defaultSource = '__source__';
+  let hasContent = false;
+  for (let item of options.sources || []) {
+    if (item.default) {
+      defaultSource = item.name;
+    }
+    if (item.content) {
+      hasContent = true;
+    }
+    sourceData.set(item.name, item);
+  }
+
   let names = new Map();
   let sources = new Map();
-  let encodedMappings = serializeMappings(mappings, names, sources);
+  let encodedMappings = serializeMappings(mappings, names, sources, defaultSource);
 
   let map = {
     version: 3,
@@ -13,11 +26,11 @@ function generateSourceMap(mappings, options = {}) {
   options.file && (map.file = options.file);
   options.sourceRoot && (map.sourceRoot = options.sourceRoot);
 
-  if (options.contents) {
+  if (hasContent) {
     map.sourcesContent = [...sources.keys()].map(source => {
-      let content = options.content[source];
-      return typeof content === 'string' ? content : null;
-    })
+      let entry = sourceData.get(source);
+      return (entry && typeof entry.content === 'string') ? entry.content : null;
+    });
   }
 
   return map;
@@ -60,7 +73,7 @@ function mappingsEqual(a, b) {
   );
 }
 
-function serializeMappings(mappings, sources, names) {
+function serializeMappings(mappings, names, sources, defaultSource) {
   let prevGeneratedLine = 1;
   let prevGeneratedColumn = 0;
   let prevOriginalLine = 0;
@@ -90,33 +103,33 @@ function serializeMappings(mappings, sources, names) {
     next += encodeVLQ(mapping.generated.column - prevGeneratedColumn);
     prevGeneratedColumn = mapping.generated.column;
 
-    if (mapping.source != null) {
-      if (!sources.has(mapping.source)) {
-        sources.set(mapping.source, sources.size - 1);
+    let source = mapping.source || defaultSource;
+
+    if (!sources.has(source)) {
+      sources.set(source, sources.size - 1);
+    }
+
+    // Source index
+    let sourceIndex = sources.get(source);
+    next += encodeVLQ(sourceIndex - prevSource);
+    prevSource = sourceIndex;
+
+    // Original line
+    next += encodeVLQ(mapping.original.line - 1 - prevOriginalLine);
+    prevOriginalLine = mapping.original.line - 1;
+
+    // Original column
+    next += encodeVLQ(mapping.original.column - prevOriginalColumn);
+    prevOriginalColumn = mapping.original.column;
+
+    // Identifier name index
+    if (mapping.name) {
+      if (!names.has(mapping.name)) {
+        names.set(mapping.name, names.size - 1);
       }
-
-      // Source index
-      let sourceIndex = sources.get(mapping.source);
-      next += encodeVLQ(sourceIndex - prevSource);
-      prevSource = sourceIndex;
-
-      // Original line
-      next += encodeVLQ(mapping.original.line - 1 - prevOriginalLine);
-      prevOriginalLine = mapping.original.line - 1;
-
-      // Original column
-      next += encodeVLQ(mapping.original.column - prevOriginalColumn);
-      prevOriginalColumn = mapping.original.column;
-
-      // Identifier name index
-      if (mapping.name != null) {
-        if (!names.has(mapping.name)) {
-          names.set(mapping.name, names.size - 1);
-        }
-        let nameIndex = names.get(mapping.name);
-        next += encodeVLQ(nameIndex - prevName);
-        prevName = nameIndex;
-      }
+      let nameIndex = names.get(mapping.name);
+      next += encodeVLQ(nameIndex - prevName);
+      prevName = nameIndex;
     }
 
     result += next;
