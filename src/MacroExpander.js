@@ -1,39 +1,3 @@
-/*
-
-MVP Goals:
-
-- Command line
-  - Translate directory and write to an output directory
-  - Translate file and write to stdout or file
-- Loader (require -r annotated)
-- Bundler plugins
-  - Webpack
-  - Rollup
-  - Parcel
-- Source mapping
-
-Not MVP:
-
-- Helper library for doing transforms
-- General purpose compile-to-JS toolchain
-
-Notes:
-
-- Translation is async, which will cause problems if we are wanting to run it
-  like a preloader
-- Source mapping for errors on Node is henious (see node-source-map-support)
-  but this seems to be a requirement for transparent runtime compilation.
-
-Compile-to-JS toolchain
-
-- Output AST
-- Output code generation
-- Source map generation
-- Node error stack mapping
-
-*/
-
-
 const { parse, print } = require('./parser.js');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
@@ -167,17 +131,9 @@ function runProcessors(root, list, registry) {
   // run "global" processors on every node? This would ensure
   // a single traversal, rather than multiple traversals
   // for each global processor.
-  for (let processor of registry.globalMacros)
+  for (let processor of registry.globalMacros) {
     processor(root);
+  }
 }
-
-/*
-console.log(expandMacros(`
-  @import '../examples/custom-element.js';
-
-  @customElement('p-foo')
-  class X extends HTMLElement {}
-`).output);
-*/
 
 module.exports = { expandMacros, registerLoader };

@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { registerLoader } = require('../');
+const { registerLoader } = require('../src/default.js');
 
 registerLoader();
 

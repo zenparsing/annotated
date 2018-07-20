@@ -1,13 +1,8 @@
 const Module = require('module');
 
-let translate = source => ({
-  output: source,
-});
+let translate = source => ({ output: source });
 
 class ModuleLoader {
-
-  // TODO: Should this be usable in the browser?
-  // TODO: Use "new" module lookup rules?
 
   constructor(location) {
     if (!location) {
@@ -51,11 +46,14 @@ function startModuleTranslation() {
   if (Module.prototype._compile === compileOverride) {
     return () => {};
   }
+  // TODO: Override node and V8 error reporting to use
+  // mappings from translate hook (see node-source-map-support)
   Module.prototype._compile = compileOverride;
   return () => { Module.prototype._compile = _compile };
 }
 
 function shouldTranslate(filename) {
+  // Don't translate files in node_modules
   return !/[\/\\]node_modules[\/\\]/i.test(filename);
 }
 

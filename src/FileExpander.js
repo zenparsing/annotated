@@ -73,9 +73,6 @@ function writeOutput(path, content) {
   });
 }
 
-// TODO: optionally output source maps
-// TODO: optionally bundle
-
 async function expandFileToString(inPath, options = {}) {
   inPath = path.resolve(inPath);
   let source = await readInput(inPath);
@@ -86,6 +83,7 @@ async function expandFileToString(inPath, options = {}) {
   return result.output;
 }
 
+// TODO: optionally output source maps
 async function expandFile(inPath, outPath, options = {}) {
   inPath = path.resolve(inPath);
   outPath = path.resolve(outPath);
