@@ -83,7 +83,6 @@ async function expandFileToString(inPath, options = {}) {
   return result.output;
 }
 
-// TODO: optionally output source maps
 async function expandFile(inPath, outPath, options = {}) {
   inPath = path.resolve(inPath);
   outPath = path.resolve(outPath);
@@ -102,7 +101,15 @@ async function expandFile(inPath, outPath, options = {}) {
     translateModules: options.translateModules,
   });
 
+  // TODO: If options.sourceMap then create a source map file
+  // Allow further option to create it inline. Should we supply
+  // those options to expandMacro?
+
   await writeOutput(outPath, result.output);
+
+  if (options.sourceMap) {
+    throw new Error('Not implemented');
+  }
 }
 
 async function expandFolder(inPath, outPath, options = {}) {
