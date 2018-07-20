@@ -1,4 +1,4 @@
-const { parse, print } = require('./parser.js');
+const { parse, print } = require('esparse');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Twister } = require('./Twister.js');

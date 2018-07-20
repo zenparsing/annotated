@@ -1,4 +1,4 @@
-const { parse } = require('./parser.js');
+const { parse } = require('esparse');
 
 class Twister {
 

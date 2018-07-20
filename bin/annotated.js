@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const lib = require('../src/default.js');
+const lib = require('../');
 const fs = require('fs');
 const path = require('path');
 
