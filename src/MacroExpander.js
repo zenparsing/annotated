@@ -41,10 +41,6 @@ function linkAnnotations(ast, annotations) {
 
     let matching = [];
 
-    // TODO: What happens if we have an annotation right before }?
-    // Should we lock down more forcefully where these things
-    // can appear?
-
     while (node.start > annotation.end) {
       // Add annotations in reverse order
       matching.unshift(annotation);

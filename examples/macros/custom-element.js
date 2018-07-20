@@ -17,7 +17,7 @@ export function registerMacros(define, api) {
       }
       // Insert a define statement after class definition
       api.insertStatementAfter(
-        classNode,
+        node,
         api.statement`
           window.customElements.define(
             ${ specifier },

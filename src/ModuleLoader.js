@@ -1,4 +1,5 @@
 const Module = require('module');
+const path = require('path');
 
 let translate = source => ({ output: source });
 
@@ -6,10 +7,11 @@ class ModuleLoader {
 
   constructor(location) {
     if (!location) {
-      location = process.cwd();
+      location = path.join(process.cwd(), 'module-loader');
     }
     this._module = new Module(location, null);
-    this._module.paths = Module._nodeModulePaths(location);
+    this._module.filename = location;
+    this._module.paths = Module._nodeModulePaths(path.dirname(location));
     this._location = location;
   }
 
