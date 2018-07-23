@@ -61,7 +61,7 @@ function shouldTranslate(filename) {
 
 function compileOverride(content, filename) {
   if (shouldTranslate(filename)) {
-    content = translate(removeShebang(content)).output;
+    content = translate(removeShebang(content), filename).output;
   }
   return _compile.call(this, content, filename);
 }

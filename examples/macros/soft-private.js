@@ -1,24 +1,39 @@
 export function registerMacros(define, api) {
   define(ast => {
-    api.visit(new class Visitor {
+    api.visit(ast, new class SoftPrivateVisitor {
 
       constructor() {
-        this.names = new Set();
+        this.names = new Map();
       }
 
       getSymbolIdentifier(name) {
         if (name.startsWith('_')) {
-          // TODO: uniquify name, store in names
-          return { type: 'Identifier', value: name };
+          let value = this.names.get(name);
+          if (value) {
+            return { type: 'Identifier', value };
+          }
+          let ident = api.uniqueIdentifier(name);
+          this.names.set(name, ident.value);
+          return ident;
         }
 
         return null;
       }
 
+      Module(node) {
+        let statements = Array.from(this.names).map(([key, value]) => {
+          let ident = { type: 'Identifier', value };
+          let name = { type: 'StringLiteral', value: key };
+          return api.statement`const ${ ident } = Symbol(${ name })`;
+        });
+
+        node.statements.unshift(...statements);
+      }
+
       MemberExpression(node) {
-        let prop = node.left;
-        if (prop.type === 'Identifier') {
-          let name = this.getSymbolIdentifier(prop.value);
+        let { property } = node;
+        if (property.type === 'Identifier') {
+          let name = this.getSymbolIdentifier(property.value);
           if (name) {
             node.property = {
               type: 'ComputedPropertyName',

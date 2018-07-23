@@ -13,22 +13,22 @@ export function registerMacros(define, api) {
     if (classNode.type === 'ClassDeclaration') {
       // Add an identifier for default class exports
       if (!classNode.identifier) {
-        classNode.identifier = api.uniqueIdentifier('_class');
+        classNode.identifier = api.uniqueIdentifier(node, '_class');
       }
       // Insert a define statement after class definition
-      api.insertStatementAfter(
-        node,
-        api.statement`
-          window.customElements.define(
-            ${ specifier },
-            ${ classNode.identifier },
-            ${ options }
-          )
-        `
-      );
+      let { statements } = node.parent;
+      statements.splice(statements.indexOf(node) + 1, 0, api.statement`
+        window.customElements.define(
+          ${ specifier },
+          ${ classNode.identifier },
+          ${ options }
+        )
+      `);
     } else {
       // Create an identifier for the class expression
-      let ident = api.uniqueVariable('_class');
+      let  ident = api.uniqueIdentifier('_class');
+
+      // TODO: Insert variable declaration
 
       // Wrap class definition in a sequence expression
       api.replaceNode(classNode, api.expression`

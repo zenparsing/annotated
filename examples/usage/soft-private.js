@@ -1,7 +1,13 @@
 @import '../macros/soft-private.js';
 
-class C {
-  _x = 1;
+export class C {
+  //_x = 1;
+
+  constructor() {
+    this._x = 1;
+  }
+
+  getX() { return this._x = 1 }
 
   _y() { console.log(this._x); }
 

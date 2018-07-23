@@ -1,10 +1,24 @@
-const { parse } = require('esparse');
+const { parse, AST } = require('esparse');
+
+function createScopeMap(root) {
+  function visit(scope) {
+    if (scope.node) {
+      map.set(scope.node, scope);
+    }
+    scope.children.forEach(visit);
+  }
+
+  let map = new Map();
+  visit(root);
+  return map;
+}
 
 class Twister {
 
   constructor({ ast, scopeTree }) {
     this._ast = ast;
     this._scopeTree = scopeTree;
+    this._scopeMap = null;
   }
 
   get ast() {
@@ -15,43 +29,45 @@ class Twister {
     return this._scopeTree;
   }
 
-  uniqueIdentifier(base) {
-    // TODO: Use scope analysis to determine whether this
-    // identifier is unique
-    return { type: 'Identifier', value: base };
-  }
+  uniqueIdentifier(base, node = null) {
+    // TODO: This probably breaks horribly as we mutate the tree
+    // and add declarations and other things
+    let scope = this._scopeTree;
 
-  uniqueVariable(base) {
-    // TODO: Add declaration to scope
-    return this.uniqueIdentifier(base);
-  }
-
-  insertStatementAfter(node, newNode) {
-    let { statements } = node.parent;
-    let pos = statements.indexOf(node);
-    statements.splice(pos + 1, 0, newNode);
-  }
-
-  findChildPosition(node) {
-    // TODO: We should probably use a more generic tree structure
-    // so that we don't have to do all of this property key magic
-    let parent = node.parent;
-    let keys = Object.keys(parent);
-
-    for (let key of keys) {
-      if (key === 'parent') continue;
-
-      let value = parent[key];
-      if (value === node) return { parent, key, index: null };
-
-      if (Array.isArray(value)) {
-        for (let j = 0; j < value.length; ++j) {
-          if (value[j] === node) return { parent, key, index: j };
-        }
+    if (node) {
+      if (!this._scopeMap) {
+        this._scopeMap = createScopeMap(this._scopeTree);
       }
+
+      while (!this._scopeMap.has(node)) {
+        node = node.parent;
+      }
+
+      scope = this._scopeMap.get(node);
     }
 
-    throw new Error('Node not found in parent');
+    nextIdentifier:
+    for (let i = 0; true; ++i) {
+      let value = base;
+      if (i > 0) {
+        value += '$' + i;
+      }
+
+      for (let free of scope.free) {
+        if (free === value) continue nextIdentifier;
+      }
+
+      for (let s = scope; s; s = s.parent) {
+        if (s.names[value]) continue nextIdentifier;
+      }
+
+      // TODO: Storing the name so that it can't be reused for
+      // the same scope later. We'll probably break things by
+      // not having the right shaped object here, though.
+      scope.names[value] = {};
+
+      return { type: 'Identifier', value };
+    }
   }
 
   removeNode(node) {
@@ -60,20 +76,22 @@ class Twister {
 
   replaceNode(oldNode, newNode) {
     // TODO: Worry about fixing "parent" pointers?
-    let pos = this.findChildPosition(oldNode);
-    if (pos.index !== null) {
-      if (newNode) {
-        pos.parent[pos.key].splice(pos.index, 1, newNode);
+    let { parent } = oldNode;
+    AST.forEachChild(parent, (child, key, index) => {
+      if (child !== oldNode) return;
+
+      if (index === null) {
+        parent[key] = newNode;
+      } else if (newNode) {
+        parent[key].splice(index, 1, newNode);
       } else {
-        pos.parent[pos.key].splice(pos.index, 1);
+        parent[key].splice(index, 1);
       }
-    } else {
-      pos.parent[pos.key] = newNode;
-    }
+    });
   }
 
   visit(node, visitor) {
-    node.children().forEach(child => this.visit(child, visitor));
+    AST.forEachChild(node, child => this.visit(child, visitor));
     if (typeof visitor[node.type] === 'function') {
       visitor[node.type](node);
     }
@@ -96,21 +114,28 @@ class Twister {
 
   template(literals, ...values) {
     let source = '';
-    for (let i = 0; i < literals.length; ++i) {
-      source += literals[i];
-      if (i < values.length) source += '$$MACRO';
+
+    if (typeof literals === 'string') {
+      source = literals;
+    } else {
+      for (let i = 0; i < literals.length; ++i) {
+        source += literals[i];
+        if (i < values.length) source += '$$MACRO';
+      }
     }
 
     let result = parse(source, { module: true, addParentLinks: true });
-    let index = 0;
 
-    this.visit(result.ast, {
-      Identifier: node => {
-        if (node.value === '$$MACRO') {
-          this.replaceNode(node, values[index++]);
+    if (values.length > 0) {
+      let index = 0;
+      this.visit(result.ast, {
+        Identifier: node => {
+          if (node.value === '$$MACRO') {
+            this.replaceNode(node, values[index++]);
+          }
         }
-      }
-    });
+      });
+    }
 
     return result.ast;
   }

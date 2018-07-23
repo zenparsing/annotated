@@ -1,11 +1,12 @@
-const { parse, print } = require('esparse');
+const { AST, parse, print } = require('esparse');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Twister } = require('./Twister.js');
 const ModuleTranslator = require('./ModuleTranslator.js');
 
-ModuleLoader.translate = source => expandMacros(source, {
+ModuleLoader.translate = (source, filename) => expandMacros(source, {
   translateModules: true,
+  location: filename,
 });
 
 function registerLoader(location) {
@@ -58,7 +59,7 @@ function linkAnnotations(ast, annotations) {
       if (!annotation) break;
     }
 
-    node.children().forEach(visit);
+    AST.forEachChild(node, visit);
 
     if (matching.length > 0) {
       output.push({ node, annotations: matching });

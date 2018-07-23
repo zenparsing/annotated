@@ -1,23 +1,16 @@
-function registerMacros(define, twister) {
-  define(() => ImportExportVisitor.process(twister));
+function registerMacros(define, api) {
+  define(ast => new ImportExportVisitor(api).visit(ast));
 }
 
 class ImportExportVisitor {
-  constructor(twister) {
-    this.twister = twister;
+  constructor(api) {
+    this.moduleNames = new Map();
+    this.api = api;
     this.reexports = [];
     this.exports = [];
     this.imports = [];
     this.replacements = null;
     this.index = 0;
-  }
-
-  static process(twister) {
-    return new this(twister).process();
-  }
-
-  process() {
-    this.visit(this.twister.ast);
   }
 
   visit(node) {
@@ -30,11 +23,20 @@ class ImportExportVisitor {
     this.replacements[this.index] = newNode;
   }
 
-  moduleIdentifier(value) {
-    return {
-      type: 'Identifier',
-      value: '_' + value.replace(/[^a-zA-Z0-1_$]/g, '_'),
-    };
+  moduleIdentifier(from) {
+    let value = this.moduleNames.get(from.value);
+    if (value) {
+      return { type: 'Identifier', value };
+    }
+
+    value = '_' + from.value
+      .replace(/.*[\/\\](?=[^\/\\]+$)/, '')
+      .replace(/\..*$/, '')
+      .replace(/[^a-zA-Z0-1_$]/g, '_');
+
+    let ident = this.api.uniqueIdentifier(value);
+    this.moduleNames.set(value, ident.value);
+    return ident;
   }
 
   Module(node) {
@@ -45,26 +47,26 @@ class ImportExportVisitor {
       this.visit(node.statements[i]);
     }
 
-    let statements = [this.twister.statement`'use strict'`];
+    let statements = [this.api.statement`'use strict'`];
 
     for (let { names, from, exporting } of this.imports) {
       if (exporting && names.length === 1) {
         let { imported, local } = names[0];
         if (imported) {
-          statements.push(this.twister.statement`
+          statements.push(this.api.statement`
             exports.${ local } = require(${ from }).${ imported }
           `);
         } else {
-          statements.push(this.twister.statement`
+          statements.push(this.api.statement`
             exports.${ local } = require(${ from })
           `);
         }
         continue;
       }
 
-      let ident = this.moduleIdentifier(from.value);
+      let ident = this.moduleIdentifier(from);
 
-      statements.push(this.twister.statement`
+      statements.push(this.api.statement`
         const ${ ident } = require(${ from })
       `);
 
@@ -73,27 +75,27 @@ class ImportExportVisitor {
 
         if (exporting) {
           if (imported) {
-            statement = this.twister.statement`
+            statement = this.api.statement`
               exports.${ local } = ${ ident }.${ imported }
             `;
           } else {
-            statement = this.twister.statement`
+            statement = this.api.statement`
               exports.${ local } = ${ ident }
             `;
           }
         } else {
           if (imported) {
             if (imported.value === 'default') {
-              statement = this.twister.statement`
+              statement = this.api.statement`
                 const ${ local } = typeof ${ ident } === 'function' ? ${ ident } : ${ ident }.default
               `;
             } else {
-              statement = this.twister.statement`
+              statement = this.api.statement`
                 const ${ local } = ${ ident }.${ imported }
               `;
             }
           } else {
-            statement = this.twister.statement`
+            statement = this.api.statement`
               const ${ local } = ${ ident }
             `;
           }
@@ -105,7 +107,7 @@ class ImportExportVisitor {
 
     for (let { local, exported, hoist } of this.exports) {
       let value = hoist ? local : { type: 'Identifier', value: 'undefined' };
-      statements.push(this.twister.statement`
+      statements.push(this.api.statement`
         exports.${ exported } = ${ value }
       `);
     }
@@ -195,7 +197,7 @@ class ImportExportVisitor {
           exported: ident,
           hoist: false,
         });
-        statements.push(this.twister.statement`
+        statements.push(this.api.statement`
           exports.${ ident } = ${ ident }
         `);
       }
@@ -213,7 +215,7 @@ class ImportExportVisitor {
       } else {
         this.replaceWith([
           declaration,
-          this.twister.statement`exports.${ ident } = ${ ident }`,
+          this.api.statement`exports.${ ident } = ${ ident }`,
         ]);
       }
       this.exports.push(exportName);
@@ -242,7 +244,7 @@ class ImportExportVisitor {
 
         this.exports.push(name);
 
-        statements.push(this.twister.statement`
+        statements.push(this.api.statement`
           exports.${ name.exported } = ${ name.local }
         `);
       }
@@ -254,12 +256,8 @@ class ImportExportVisitor {
     let { binding } = node;
 
     if (binding.type === 'FunctionDeclaration' || binding.type === 'ClassDeclaration') {
-
       if (!binding.identifier) {
-        binding.identifier = {
-          type: 'Identifier',
-          value: '__default', // TODO: uniquify
-        };
+        binding.identifier = this.api.uniqueIdentifier('_default');
       }
 
       let exportName = {
@@ -274,7 +272,7 @@ class ImportExportVisitor {
       } else {
         this.replaceWith([
           binding,
-          this.twister.statement`exports.default = ${ binding.identifier }`,
+          this.api.statement`exports.default = ${ binding.identifier }`,
         ]);
       }
 
@@ -287,7 +285,7 @@ class ImportExportVisitor {
         exported: { type: 'Identifier', value: 'default' },
         hoist: false,
       });
-      this.replaceWith(this.twister.statement`
+      this.replaceWith(this.api.statement`
         exports.default = ${ node.binding };
       `);
 

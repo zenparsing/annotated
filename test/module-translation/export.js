@@ -44,8 +44,8 @@ test('export default anonymous function', `
   export default function() {}
 `, `
   'use strict';
-  exports.default = __default;
-  function __default() {
+  exports.default = _default;
+  function _default() {
 
   }
 `);
@@ -66,10 +66,10 @@ test('export default anonymous class', `
 `, `
   'use strict';
   exports.default = undefined;
-  class __default {
+  class _default {
 
   }
-  exports.default = __default;
+  exports.default = _default;
 `);
 
 test('export default expression', `
