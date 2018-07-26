@@ -1,5 +1,5 @@
-function registerMacros(define, api) {
-  define(ast => new ImportExportVisitor(api).visit(ast));
+function registerMacros(define) {
+  define((ast, api) => new ImportExportVisitor(api).visit(ast));
 }
 
 class ImportExportVisitor {

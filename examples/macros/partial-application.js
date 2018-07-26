@@ -1,5 +1,5 @@
-export function registerMacros(define, api) {
-  define(ast => {
+export function registerMacros(define) {
+  define((ast, api) => {
     api.visit(ast, new class PartialApplicationVisitor {
 
       CallExpression(node) {

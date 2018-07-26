@@ -1,5 +1,5 @@
 export function registerMacros(define, api) {
-  define(ast => {
+  define((ast, api) => {
     api.visit(ast, new class SoftPrivateVisitor {
 
       constructor() {

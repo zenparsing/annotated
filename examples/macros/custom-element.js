@@ -1,5 +1,5 @@
-export function registerMacros(define, api) {
-  define('customElement', (node, annotation) => {
+export function registerMacros(define) {
+  define('customElement', (node, annotation, api) => {
     let classNode =
       node.type === 'ExportDefault' ? node.binding :
       node.type === 'ExportDeclaration' ? node.declaration :

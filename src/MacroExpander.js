@@ -29,9 +29,9 @@ function expandMacros(source, options = {}) {
   let imports = getMacroImports(linked);
   let loader = new ModuleLoader(options.location);
   let twister = new Twister(result);
-  let registry = registerProcessors(imports, loader, twister, macros);
+  let registry = registerProcessors(imports, loader, macros);
 
-  runProcessors(result.ast, linked, registry);
+  runProcessors(linked, registry, twister);
 
   return print(result.ast, { lineMap: result.lineMap });
 }
@@ -97,7 +97,7 @@ function getMacroImports(list) {
   return modules;
 }
 
-function registerProcessors(imports, loader, api, macros) {
+function registerProcessors(imports, loader, macros) {
   let registry = new MacroRegistry();
 
   function define(name, processor) {
@@ -110,24 +110,28 @@ function registerProcessors(imports, loader, api, macros) {
       throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
     }
 
-    module.registerMacros(define, api);
+    module.registerMacros(define);
   }
 
-  define('import', node => api.removeNode(node));
+  define('import', (node, annotation, api) => api.removeNode(node));
 
   for (let module of macros) {
-    module.registerMacros(define, api);
+    module.registerMacros(define);
   }
 
   return registry;
 }
 
-function runProcessors(root, list, registry) {
+function runProcessors(list, registry, twister) {
   for (let { node, annotations } of list) {
     for (let annotation of annotations) {
       let name = annotation.path.map(ident => ident.value).join('.');
       let processor = registry.getNamedMacro(name);
-      processor(node, annotation);
+      let result = processor(node, annotation, twister);
+      if (result) {
+        twister.replaceNode(node, result);
+        node = result;
+      }
     }
   }
 
@@ -136,7 +140,7 @@ function runProcessors(root, list, registry) {
   // a single traversal, rather than multiple traversals
   // for each global processor.
   for (let processor of registry.globalMacros) {
-    processor(root);
+    processor(twister.ast, twister);
   }
 }
 
