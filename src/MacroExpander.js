@@ -48,10 +48,6 @@ function linkAnnotations(ast, annotations) {
 
     let matching = [];
 
-    // TODO: Currently annotations can appear as the last
-    // item in a statement list or class body; in that
-    // case the annotation will not be linked correctly
-
     while (node.start > annotation.end) {
       // Add annotations in reverse order
       matching.unshift(annotation);
