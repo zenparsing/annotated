@@ -14,11 +14,7 @@ function registerLoader(location) {
 }
 
 function expandMacros(source, options = {}) {
-  let result = parse(source, {
-    module: true,
-    resolveScopes: true,
-    addParentLinks: true,
-  });
+  let result = parse(source, { module: true, resolveScopes: true });
 
   let macros = [];
   if (options.translateModules) {

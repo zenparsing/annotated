@@ -16,7 +16,7 @@ export function registerMacros(define) {
         classNode.identifier = api.uniqueIdentifier(node, '_class');
       }
       // Insert a define statement after class definition
-      let { statements } = node.parent;
+      let { statements } = api.getParentNode(node);
       statements.splice(statements.indexOf(node) + 1, 0, api.statement`
         window.customElements.define(
           ${ specifier },
@@ -28,7 +28,7 @@ export function registerMacros(define) {
       // Create an identifier for the class expression
       let  ident = api.uniqueIdentifier('_class');
 
-      // TODO: Insert variable declaration
+      // TODO: Insert variable declaration into nearest enclosing scope.
 
       // Wrap class definition in a sequence expression
       api.replaceNode(classNode, api.expression`

@@ -173,14 +173,10 @@ class ImportExportVisitor {
         list.push(node);
         break;
       case 'ObjectPattern':
-        node.properties.forEach(p =>
-          this.getPatternDeclarations(p.pattern || p.name, list)
-        )
+        node.properties.forEach(p => this.getPatternDeclarations(p.pattern || p.name, list));
         break;
       case 'ArrayPattern':
-        node.elements.forEach(
-          p => this.getPatternDeclarations(p.pattern, list)
-        );
+        node.elements.forEach(p => this.getPatternDeclarations(p.pattern, list));
         break;
     }
   }

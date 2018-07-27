@@ -13,20 +13,26 @@ function createScopeMap(root) {
   return map;
 }
 
+function mapParentNodes(root, map) {
+  AST.forEachChild(root, child => {
+    map.set(child, root);
+    mapParentNodes(child, map);
+  });
+}
+
 class Twister {
 
   constructor({ ast, scopeTree }) {
     this._ast = ast;
     this._scopeTree = scopeTree;
     this._scopeMap = null;
+    this._parentMap = new WeakMap();
+
+    mapParentNodes(this._ast, this._parentMap);
   }
 
   get ast() {
     return this._ast;
-  }
-
-  get scopeTree() {
-    return this._scopeTree;
   }
 
   uniqueIdentifier(base, node = null) {
@@ -40,7 +46,7 @@ class Twister {
       }
 
       while (!this._scopeMap.has(node)) {
-        node = node.parent;
+        node = this.getParentNode(node);
       }
 
       scope = this._scopeMap.get(node);
@@ -70,13 +76,16 @@ class Twister {
     }
   }
 
+  getParentNode(node) {
+    return this._parentMap.get(node);
+  }
+
   removeNode(node) {
     this.replaceNode(node, null);
   }
 
   replaceNode(oldNode, newNode) {
-    // TODO: Worry about fixing "parent" pointers?
-    let { parent } = oldNode;
+    let parent = this.getParentNode(oldNode);
     AST.forEachChild(parent, (child, key, index) => {
       if (child !== oldNode) return;
 
@@ -87,6 +96,12 @@ class Twister {
       } else {
         parent[key].splice(index, 1);
       }
+
+      if (newNode) {
+        this._parentMap.set(newNode, parent);
+      }
+
+      // TODO: break computation when first match is found
     });
   }
 
@@ -124,7 +139,9 @@ class Twister {
       }
     }
 
-    let result = parse(source, { module: true, addParentLinks: true });
+    let result = parse(source, { module: true });
+
+    mapParentNodes(result.ast, this._parentMap);
 
     if (values.length > 0) {
       let index = 0;
