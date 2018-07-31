@@ -1,37 +1,47 @@
-export function registerMacros(define) {
-  define('customElement', (node, annotation, api) => {
+export function registerMacros(api) {
+  api.define('customElement', (path, annotation) => {
+    let { node } = path;
+
     let classNode =
       node.type === 'ExportDefault' ? node.binding :
       node.type === 'ExportDeclaration' ? node.declaration :
       node;
 
-    api.validateNodeType(classNode, ['ClassExpression', 'ClassDeclaration']);
+    switch (classNode.type) {
+      case 'ClassExpression':
+      case 'ClassDeclaration':
+        break;
+      default:
+        throw new SyntaxError('@customElement can only be applied to classes');
+    }
 
     let specifier = annotation.arguments[0];
     let options = annotation.arguments[1] || { type: 'NullLiteral' };
 
     if (classNode.type === 'ClassDeclaration') {
+
       // Add an identifier for default class exports
       if (!classNode.identifier) {
-        classNode.identifier = api.uniqueIdentifier(node, '_class');
+        classNode.identifier = path.uniqueIdentifier('_class');
       }
       // Insert a define statement after class definition
-      let { statements } = api.getParentNode(node);
-      statements.splice(statements.indexOf(node) + 1, 0, api.statement`
+      let { statements } = path.parentNode;
+      statements.splice(statements.indexOf(node) + 1, 0, api.templates.statement`
         window.customElements.define(
           ${ specifier },
           ${ classNode.identifier },
           ${ options }
         )
       `);
+
     } else {
+
       // Create an identifier for the class expression
-      let  ident = api.uniqueIdentifier('_class');
+      let  ident = path.uniqueVariable('_class', { kind: 'let' });
 
-      // TODO: Insert variable declaration into nearest enclosing scope.
-
-      // Wrap class definition in a sequence expression
-      api.replaceNode(classNode, api.expression`
+      // TODO: Is "path" always right here? It couldn't be an export
+      // declaration?
+      path.replaceNode(api.template.expression`
         (
           ${ ident } = ${ classNode },
           window.customElements.define(
@@ -40,8 +50,9 @@ export function registerMacros(define) {
             ${ options }
           ),
           ${ ident }
-        )`
-      );
+        )
+      `);
+
     }
   });
 }

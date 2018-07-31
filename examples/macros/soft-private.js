@@ -1,90 +1,88 @@
-export function registerMacros(define, api) {
-  define((ast, api) => {
-    api.visit(ast, new class SoftPrivateVisitor {
+export function registerMacros(api) {
+  api.define(path => path.visit(new class SoftPrivateVisitor {
 
-      constructor() {
-        this.names = new Map();
-      }
+    constructor() {
+      this.names = new Map();
+    }
 
-      getSymbolIdentifier(name) {
-        if (name.startsWith('_')) {
-          let value = this.names.get(name);
-          if (value) {
-            return { type: 'Identifier', value };
-          }
-          let ident = api.uniqueIdentifier(name);
-          this.names.set(name, ident.value);
-          return ident;
+    getSymbolIdentifier(name) {
+      if (name.startsWith('_')) {
+        let value = this.names.get(name);
+        if (value) {
+          return { type: 'Identifier', value };
         }
-
-        return null;
+        let ident = path.uniqueIdentifier(name);
+        this.names.set(name, ident.value);
+        return ident;
       }
 
-      Module(node) {
-        let statements = Array.from(this.names).map(([key, value]) => {
-          let ident = { type: 'Identifier', value };
-          let name = { type: 'StringLiteral', value: key };
-          return api.statement`const ${ ident } = Symbol(${ name })`;
-        });
+      return null;
+    }
 
-        node.statements.unshift(...statements);
-      }
+    Module(node) {
+      let statements = Array.from(this.names).map(([key, value]) => {
+        let ident = { type: 'Identifier', value };
+        let name = { type: 'StringLiteral', value: key };
+        return api.templates.statement`const ${ ident } = Symbol(${ name })`;
+      });
 
-      MemberExpression(node) {
-        let { property } = node;
-        if (property.type === 'Identifier') {
-          let name = this.getSymbolIdentifier(property.value);
-          if (name) {
-            node.property = {
-              type: 'ComputedPropertyName',
-              expression: name,
-            };
-          }
+      node.statements.unshift(...statements);
+    }
+
+    MemberExpression(node) {
+      let { property } = node;
+      if (property.type === 'Identifier') {
+        let name = this.getSymbolIdentifier(property.value);
+        if (name) {
+          node.property = {
+            type: 'ComputedPropertyName',
+            expression: name,
+          };
         }
       }
+    }
 
-      ComputedPropertyName(node) {
-        if (node.expression.type === 'StringLiteral') {
-          let name = this.getSymbolIdentifier(node.expression.value);
-          if (name) {
-            node.expression = name;
-          }
+    ComputedPropertyName(node) {
+      if (node.expression.type === 'StringLiteral') {
+        let name = this.getSymbolIdentifier(node.expression.value);
+        if (name) {
+          node.expression = name;
         }
       }
+    }
 
-      BinaryExpression(node) {
-        if (node.operator === 'in' && node.left.type === 'StringLiteral') {
-          let name = this.getSymbolIdentifier(node.left.value);
-          if (name) {
-            node.left = name;
-          }
+    BinaryExpression(node) {
+      if (node.operator === 'in' && node.left.type === 'StringLiteral') {
+        let name = this.getSymbolIdentifier(node.left.value);
+        if (name) {
+          node.left = name;
         }
       }
+    }
 
-      PropertyDefinition(node) {
-        if (node.name.type === 'Identifier') {
-          let name = this.getSymbolIdentifier(node.name.value);
-          if (name) {
-            node.name = {
-              type: 'ComputedPropertyName',
-              expression: name,
-            };
-          }
+    PropertyDefinition(node) {
+      if (node.name.type === 'Identifier') {
+        let name = this.getSymbolIdentifier(node.name.value);
+        if (name) {
+          node.name = {
+            type: 'ComputedPropertyName',
+            expression: name,
+          };
         }
       }
+    }
 
-      PatternProperty(node) {
-        this.PropertyDefinition(node);
-      }
+    PatternProperty(node) {
+      this.PropertyDefinition(node);
+    }
 
-      MethodDefinition(node) {
-        this.PropertyDefinition(node);
-      }
+    MethodDefinition(node) {
+      this.PropertyDefinition(node);
+    }
 
-      ClassField(node) {
-        this.PropertyDefinition(node);
-      }
+    ClassField(node) {
+      this.PropertyDefinition(node);
+    }
 
-    });
-  });
+  }));
 }

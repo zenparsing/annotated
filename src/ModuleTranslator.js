@@ -1,16 +1,21 @@
-function registerMacros(define) {
-  define((ast, api) => new ImportExportVisitor(api).visit(ast));
+function registerMacros(api) {
+  api.define(rootPath => new ImportExportVisitor(api, rootPath).execute());
 }
 
 class ImportExportVisitor {
-  constructor(api) {
+  constructor(api, rootPath) {
+    this.templates = api.templates;
+    this.rootPath = rootPath;
     this.moduleNames = new Map();
-    this.api = api;
     this.reexports = [];
     this.exports = [];
     this.imports = [];
     this.replacements = null;
     this.index = 0;
+  }
+
+  execute() {
+    this.visit(this.rootPath.node);
   }
 
   visit(node) {
@@ -34,7 +39,7 @@ class ImportExportVisitor {
       .replace(/\..*$/, '')
       .replace(/[^a-zA-Z0-1_$]/g, '_');
 
-    let ident = this.api.uniqueIdentifier(value);
+    let ident = this.rootPath.uniqueIdentifier(value);
     this.moduleNames.set(value, ident.value);
     return ident;
   }
@@ -47,17 +52,17 @@ class ImportExportVisitor {
       this.visit(node.statements[i]);
     }
 
-    let statements = [this.api.statement`'use strict'`];
+    let statements = [this.templates.statement`'use strict'`];
 
     for (let { names, from, exporting } of this.imports) {
       if (exporting && names.length === 1) {
         let { imported, local } = names[0];
         if (imported) {
-          statements.push(this.api.statement`
+          statements.push(this.templates.statement`
             exports.${ local } = require(${ from }).${ imported }
           `);
         } else {
-          statements.push(this.api.statement`
+          statements.push(this.templates.statement`
             exports.${ local } = require(${ from })
           `);
         }
@@ -66,7 +71,7 @@ class ImportExportVisitor {
 
       let ident = this.moduleIdentifier(from);
 
-      statements.push(this.api.statement`
+      statements.push(this.templates.statement`
         const ${ ident } = require(${ from })
       `);
 
@@ -75,27 +80,27 @@ class ImportExportVisitor {
 
         if (exporting) {
           if (imported) {
-            statement = this.api.statement`
+            statement = this.templates.statement`
               exports.${ local } = ${ ident }.${ imported }
             `;
           } else {
-            statement = this.api.statement`
+            statement = this.templates.statement`
               exports.${ local } = ${ ident }
             `;
           }
         } else {
           if (imported) {
             if (imported.value === 'default') {
-              statement = this.api.statement`
+              statement = this.templates.statement`
                 const ${ local } = typeof ${ ident } === 'function' ? ${ ident } : ${ ident }.default
               `;
             } else {
-              statement = this.api.statement`
+              statement = this.templates.statement`
                 const ${ local } = ${ ident }.${ imported }
               `;
             }
           } else {
-            statement = this.api.statement`
+            statement = this.templates.statement`
               const ${ local } = ${ ident }
             `;
           }
@@ -107,7 +112,7 @@ class ImportExportVisitor {
 
     for (let { local, exported, hoist } of this.exports) {
       let value = hoist ? local : { type: 'Identifier', value: 'undefined' };
-      statements.push(this.api.statement`
+      statements.push(this.templates.statement`
         exports.${ exported } = ${ value }
       `);
     }
@@ -193,7 +198,7 @@ class ImportExportVisitor {
           exported: ident,
           hoist: false,
         });
-        statements.push(this.api.statement`
+        statements.push(this.templates.statement`
           exports.${ ident } = ${ ident }
         `);
       }
@@ -211,7 +216,7 @@ class ImportExportVisitor {
       } else {
         this.replaceWith([
           declaration,
-          this.api.statement`exports.${ ident } = ${ ident }`,
+          this.templates.statement`exports.${ ident } = ${ ident }`,
         ]);
       }
       this.exports.push(exportName);
@@ -240,7 +245,7 @@ class ImportExportVisitor {
 
         this.exports.push(name);
 
-        statements.push(this.api.statement`
+        statements.push(this.templates.statement`
           exports.${ name.exported } = ${ name.local }
         `);
       }
@@ -253,7 +258,7 @@ class ImportExportVisitor {
 
     if (binding.type === 'FunctionDeclaration' || binding.type === 'ClassDeclaration') {
       if (!binding.identifier) {
-        binding.identifier = this.api.uniqueIdentifier('_default');
+        binding.identifier = this.rootPath.uniqueIdentifier('_default');
       }
 
       let exportName = {
@@ -268,7 +273,7 @@ class ImportExportVisitor {
       } else {
         this.replaceWith([
           binding,
-          this.api.statement`exports.default = ${ binding.identifier }`,
+          this.templates.statement`exports.default = ${ binding.identifier }`,
         ]);
       }
 
@@ -281,7 +286,8 @@ class ImportExportVisitor {
         exported: { type: 'Identifier', value: 'default' },
         hoist: false,
       });
-      this.replaceWith(this.api.statement`
+
+      this.replaceWith(this.templates.statement`
         exports.default = ${ node.binding };
       `);
 

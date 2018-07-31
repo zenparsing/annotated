@@ -1,8 +1,9 @@
 const { AST, parse, print } = require('esparse');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
-const { Twister } = require('./Twister.js');
+const { Path } = require('./Path.js');
 const ModuleTranslator = require('./ModuleTranslator.js');
+const Templates = require('./Templates.js');
 
 ModuleLoader.translate = (source, filename) => expandMacros(source, {
   translateModules: true,
@@ -21,25 +22,25 @@ function expandMacros(source, options = {}) {
     macros.push(ModuleTranslator);
   }
 
-  let linked = linkAnnotations(result.ast, result.annotations);
+  let rootPath = new Path(result.ast);
+  let linked = linkAnnotations(rootPath, result.annotations);
   let imports = getMacroImports(linked);
   let loader = new ModuleLoader(options.location);
-  let twister = new Twister(result);
   let registry = registerProcessors(imports, loader, macros);
 
-  runProcessors(linked, registry, twister);
+  runProcessors(linked, registry, rootPath);
 
-  return print(result.ast, { lineMap: result.lineMap });
+  return print(rootPath.node, { lineMap: result.lineMap });
 }
 
-function linkAnnotations(ast, annotations) {
+function linkAnnotations(rootPath, annotations) {
   let output = [];
   let iterator = annotations[Symbol.iterator]();
   let annotation = iterator.next().value;
 
-  function visit(node) {
+  function visit(path) {
     if (!annotation) {
-      return node;
+      return;
     }
 
     let matching = [];
@@ -51,14 +52,14 @@ function linkAnnotations(ast, annotations) {
       if (!annotation) break;
     }
 
-    AST.forEachChild(node, visit);
+    path.forEachChild(visit);
 
     if (matching.length > 0) {
-      output.push({ node, annotations: matching });
+      output.push({ path, annotations: matching });
     }
   }
 
-  visit(ast);
+  visit(rootPath);
 
   return output;
 }
@@ -96,9 +97,10 @@ function getMacroImports(list) {
 function registerProcessors(imports, loader, macros) {
   let registry = new MacroRegistry();
 
-  function define(name, processor) {
-    registry.define(name, processor);
-  }
+  let api = {
+    define(name, processor) { registry.define(name, processor); },
+    templates: Templates,
+  };
 
   for (let specifier of imports) {
     let module = loader.load(specifier);
@@ -106,28 +108,24 @@ function registerProcessors(imports, loader, macros) {
       throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
     }
 
-    module.registerMacros(define);
+    module.registerMacros(api);
   }
 
-  define('import', (node, annotation, api) => api.removeNode(node));
+  api.define('import', path => path.removeNode());
 
   for (let module of macros) {
-    module.registerMacros(define);
+    module.registerMacros(api);
   }
 
   return registry;
 }
 
-function runProcessors(list, registry, twister) {
-  for (let { node, annotations } of list) {
+function runProcessors(list, registry, rootPath) {
+  for (let { path, annotations } of list) {
     for (let annotation of annotations) {
       let name = annotation.path.map(ident => ident.value).join('.');
       let processor = registry.getNamedMacro(name);
-      let result = processor(node, annotation, twister);
-      if (result) {
-        twister.replaceNode(node, result);
-        node = result;
-      }
+      processor(path, annotation);
     }
   }
 
@@ -136,7 +134,7 @@ function runProcessors(list, registry, twister) {
   // a single traversal, rather than multiple traversals
   // for each global processor.
   for (let processor of registry.globalMacros) {
-    processor(twister.ast, twister);
+    processor(rootPath);
   }
 }
 

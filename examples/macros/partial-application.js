@@ -1,34 +1,33 @@
-export function registerMacros(define) {
-  define((ast, api) => {
-    api.visit(ast, new class PartialApplicationVisitor {
+export function registerMacros(api) {
+  api.define(path => path.visit(ast, new class PartialApplicationVisitor {
 
-      CallExpression(node) {
-        let args = node.arguments;
-        let hasPlaceholder = false;
+    CallExpression(path) {
+      let { node } = path;
+      let args = node.arguments;
+      let hasPlaceholder = false;
 
-        for (let i = 0; i < args.length; ++i) {
-          let arg = args[i];
-          if (arg.type === 'Identifier' && arg.value === '$') {
-            args[i] = {
-              type: 'MemberExpression',
-              object: { type: 'Identifier', value: '$$' },
-              property: {
-                type: 'ComputedPropertyName',
-                expression: {
-                  type: 'NumberLiteral',
-                  value: i,
-                },
+      for (let i = 0; i < args.length; ++i) {
+        let arg = args[i];
+        if (arg.type === 'Identifier' && arg.value === '$') {
+          args[i] = {
+            type: 'MemberExpression',
+            object: { type: 'Identifier', value: '$$' },
+            property: {
+              type: 'ComputedPropertyName',
+              expression: {
+                type: 'NumberLiteral',
+                value: i,
               },
-            };
-            hasPlaceholder = true;
-          }
-        }
-
-        if (hasPlaceholder) {
-          api.replaceNode(node, api.expression`((...$$) => ${ node })`);
+            },
+          };
+          hasPlaceholder = true;
         }
       }
 
-    });
-  });
+      if (hasPlaceholder) {
+        path.replaceNode(api.templates.expression`((...$$) => ${ node })`);
+      }
+    }
+
+  }));
 }

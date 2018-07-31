@@ -35,9 +35,7 @@ test('export default function', `
 `, `
   'use strict';
   exports.default = f;
-  function f() {
-
-  }
+  function f() {}
 `);
 
 test('export default anonymous function', `
@@ -45,9 +43,7 @@ test('export default anonymous function', `
 `, `
   'use strict';
   exports.default = _default;
-  function _default() {
-
-  }
+  function _default() {}
 `);
 
 test('export default class', `
@@ -88,9 +84,7 @@ test('export function', `
 `, `
   'use strict';
   exports.f = f;
-  function f() {
-
-  }
+  function f() {}
 `);
 
 test('export class', `
