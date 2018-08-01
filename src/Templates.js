@@ -1,6 +1,8 @@
 const { parse } = require('esparse');
 const { Path } = require('./Path.js');
 
+const PLACEHOLDER = '$$MACRO$$';
+
 function statement(literals, ...values) {
   return moduleTemplate(literals, ...values).statements[0];
 }
@@ -17,26 +19,26 @@ function moduleTemplate(literals, ...values) {
   } else {
     for (let i = 0; i < literals.length; ++i) {
       source += literals[i];
-      if (i < values.length) source += '$$MACRO';
+      if (i < values.length) source += PLACEHOLDER;
     }
   }
 
   let result = parse(source, { module: true });
-  let path = new Path(result.ast);
-
-  if (values.length > 0) {
-    let index = 0;
-    path.visit({
-      Identifier(path) {
-        // TODO: If a user inserts the same node into the template
-        // multiple times, we will probably want to deep copy those
-        // nodes.
-        if (path.node.value === '$$MACRO') {
-          path.replaceNode(values[index++]);
-        }
-      }
-    });
+  if (values.length === 0) {
+    return result.ast;
   }
+
+  let path = new Path(result.ast);
+  let index = 0;
+
+  path.visit({
+    Identifier(path) {
+      if (path.node.value === PLACEHOLDER) {
+        let value = values[index++];
+        path.replaceNode(value);
+      }
+    }
+  });
 
   return result.ast;
 }
