@@ -28,6 +28,9 @@ function moduleTemplate(literals, ...values) {
     let index = 0;
     path.visit({
       Identifier(path) {
+        // TODO: If a user inserts the same node into the template
+        // multiple times, we will probably want to deep copy those
+        // nodes.
         if (path.node.value === '$$MACRO') {
           path.replaceNode(values[index++]);
         }

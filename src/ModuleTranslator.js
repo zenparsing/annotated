@@ -1,11 +1,12 @@
 function registerMacros(api) {
-  api.define(rootPath => new ImportExportVisitor(api, rootPath).execute());
+  api.define(rootPath => new ImportExportProcessor(api).execute(rootPath));
 }
 
-class ImportExportVisitor {
-  constructor(api, rootPath) {
+class ImportExportProcessor {
+
+  constructor(api) {
     this.templates = api.templates;
-    this.rootPath = rootPath;
+    this.rootPath = null;
     this.moduleNames = new Map();
     this.reexports = [];
     this.exports = [];
@@ -14,8 +15,9 @@ class ImportExportVisitor {
     this.index = 0;
   }
 
-  execute() {
-    this.visit(this.rootPath.node);
+  execute(rootPath) {
+    this.rootPath = rootPath;
+    this.visit(rootPath.node);
   }
 
   visit(node) {

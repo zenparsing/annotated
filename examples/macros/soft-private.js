@@ -1,5 +1,5 @@
 export function registerMacros(api) {
-  api.define(path => path.visit(new class SoftPrivateVisitor {
+  api.define(rootPath => rootPath.visit(new class SoftPrivateVisitor {
 
     constructor() {
       this.names = new Map();
@@ -11,7 +11,7 @@ export function registerMacros(api) {
         if (value) {
           return { type: 'Identifier', value };
         }
-        let ident = path.uniqueIdentifier(name);
+        let ident = rootPath.uniqueIdentifier(name);
         this.names.set(name, ident.value);
         return ident;
       }
@@ -19,7 +19,7 @@ export function registerMacros(api) {
       return null;
     }
 
-    Module(node) {
+    Module({ node }) {
       let statements = Array.from(this.names).map(([key, value]) => {
         let ident = { type: 'Identifier', value };
         let name = { type: 'StringLiteral', value: key };
@@ -29,7 +29,7 @@ export function registerMacros(api) {
       node.statements.unshift(...statements);
     }
 
-    MemberExpression(node) {
+    MemberExpression({ node }) {
       let { property } = node;
       if (property.type === 'Identifier') {
         let name = this.getSymbolIdentifier(property.value);
@@ -42,7 +42,7 @@ export function registerMacros(api) {
       }
     }
 
-    ComputedPropertyName(node) {
+    ComputedPropertyName({ node }) {
       if (node.expression.type === 'StringLiteral') {
         let name = this.getSymbolIdentifier(node.expression.value);
         if (name) {
@@ -51,7 +51,7 @@ export function registerMacros(api) {
       }
     }
 
-    BinaryExpression(node) {
+    BinaryExpression({ node }) {
       if (node.operator === 'in' && node.left.type === 'StringLiteral') {
         let name = this.getSymbolIdentifier(node.left.value);
         if (name) {
@@ -60,7 +60,7 @@ export function registerMacros(api) {
       }
     }
 
-    PropertyDefinition(node) {
+    PropertyDefinition({ node }) {
       if (node.name.type === 'Identifier') {
         let name = this.getSymbolIdentifier(node.name.value);
         if (name) {
@@ -72,16 +72,16 @@ export function registerMacros(api) {
       }
     }
 
-    PatternProperty(node) {
-      this.PropertyDefinition(node);
+    PatternProperty(path) {
+      this.PropertyDefinition(path);
     }
 
-    MethodDefinition(node) {
-      this.PropertyDefinition(node);
+    MethodDefinition(path) {
+      this.PropertyDefinition(path);
     }
 
-    ClassField(node) {
-      this.PropertyDefinition(node);
+    ClassField(path) {
+      this.PropertyDefinition(path);
     }
 
   }));

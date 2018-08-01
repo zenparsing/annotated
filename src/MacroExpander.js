@@ -1,4 +1,4 @@
-const { AST, parse, print } = require('esparse');
+const { parse, print } = require('esparse');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Path } = require('./Path.js');
@@ -45,8 +45,8 @@ function linkAnnotations(rootPath, annotations) {
 
     let matching = [];
 
-    while (node.start > annotation.end) {
-      // Add annotations in reverse order
+    while (path.node.start > annotation.end) {
+      // Annotations are processed bottom-up
       matching.unshift(annotation);
       annotation = iterator.next().value;
       if (!annotation) break;
@@ -67,7 +67,8 @@ function linkAnnotations(rootPath, annotations) {
 function getMacroImports(list) {
   let modules = [];
 
-  for (let { node, annotations } of list) {
+  for (let { path, annotations } of list) {
+    let { node } = path;
     let importAnnotation = null;
 
     for (let annotation of annotations) {
@@ -126,6 +127,10 @@ function runProcessors(list, registry, rootPath) {
       let name = annotation.path.map(ident => ident.value).join('.');
       let processor = registry.getNamedMacro(name);
       processor(path, annotation);
+      // A processor may remove the node
+      if (!path.node) {
+        break;
+      }
     }
   }
 

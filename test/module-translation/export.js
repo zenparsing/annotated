@@ -51,9 +51,7 @@ test('export default class', `
 `, `
   'use strict';
   exports.default = undefined;
-  class C {
-
-  }
+  class C {}
   exports.default = C;
 `);
 
@@ -62,9 +60,7 @@ test('export default anonymous class', `
 `, `
   'use strict';
   exports.default = undefined;
-  class _default {
-
-  }
+  class _default {}
   exports.default = _default;
 `);
 
@@ -92,9 +88,7 @@ test('export class', `
 `, `
   'use strict';
   exports.C = undefined;
-  class C {
-
-  }
+  class C {}
   exports.C = C;
 `);
 

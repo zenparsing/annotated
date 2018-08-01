@@ -1,5 +1,5 @@
 export function registerMacros(api) {
-  api.define(path => path.visit(ast, new class PartialApplicationVisitor {
+  api.define(rootPath => rootPath.visit(new class PartialApplicationVisitor {
 
     CallExpression(path) {
       let { node } = path;
