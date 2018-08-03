@@ -16,3 +16,14 @@ test('import names', `
   const x = _a.x;
   const z = _a.y;
 `);
+
+test('import twice', `
+  import { x } from 'a';
+  import { y } from 'a';
+`, `
+  'use strict';
+  const _a = require('a');
+  const x = _a.x;
+  const _a_1 = require('a');
+  const y = _a_1.y;
+`);

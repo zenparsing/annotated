@@ -1,11 +1,20 @@
 const { AST } = require('esparse');
 
+function mapScopes(scope, map = new Map()) {
+  if (scope.node) {
+    map.set(scope.node, scope);
+  }
+  scope.children.forEach(child => mapScopes(child, map));
+  return map;
+}
+
 class Path {
 
   constructor(node, parent = null, location = null) {
     this._node = node;
     this._location = location;
     this._parent = parent;
+    this._scopeMap = parent ? parent._scopeMap : null;
   }
 
   get node() {
@@ -60,26 +69,48 @@ class Path {
     }
   }
 
-  /*
-  switch(visitor) {
-    let method = visitor[this._node.type] || visitor[this._node.Node];
-    if (typeof method !== 'function') {
-      throw new Error(`Visitor method "${ this._node.type }" does not exist`);
-    }
-    method.call(visitor, this);
-  }
-  */
-
   uniqueIdentifier(baseName) {
-    // TODO: Use scope analysis
-    return { type: 'Identifier', value: baseName };
+    let scope = null;
+    for (let path = this; path && !scope; path = path.parent) {
+      scope = this._scopeMap.get(path.node);
+    }
+
+    function isUnique(name) {
+      for (let free of scope.free) {
+        if (free === name) return false;
+      }
+
+      for (let s = scope; s; s = s.parent) {
+        if (s.names[name]) return false;
+      }
+
+      return true;
+    }
+
+    for (let i = 0; true; ++i) {
+      let value = baseName;
+      if (i > 0) {
+        value += '_' + i;
+      }
+
+      if (isUnique(value)) {
+        scope.free.push(value);
+        return { type: 'Identifier', value };
+      }
+    }
   }
 
   uniqueVariable(baseName, options = {}) {
     let { kind = 'let', initializer = null } = options;
     let ident = this.uniqueIdentifier(baseName);
-    // Install a declaration in scope (what happens for function params?)
+    // TODO: Install a declaration in scope (what happens for function params?)
     return ident;
+  }
+
+  static fromParseResult(result) {
+    let path = new Path(result.ast);
+    path._scopeMap = mapScopes(result.scopeTree);
+    return path;
   }
 
 }

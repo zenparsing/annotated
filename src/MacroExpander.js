@@ -22,7 +22,7 @@ function expandMacros(source, options = {}) {
     macros.push(ModuleTranslator);
   }
 
-  let rootPath = new Path(result.ast);
+  let rootPath = Path.fromParseResult(result);
   let linked = linkAnnotations(rootPath, result.annotations);
   let imports = getMacroImports(linked);
   let loader = new ModuleLoader(options.location);
