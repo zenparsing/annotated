@@ -122,7 +122,7 @@ class ImportExportProcessor {
     for (let node of this.replacements) {
       if (Array.isArray(node)) {
         node.forEach(n => statements.push(n));
-      } else {
+      } else if (node) {
         statements.push(node);
       }
     }

@@ -77,7 +77,7 @@ class Path {
 
     function isUnique(name) {
       for (let free of scope.free) {
-        if (free === name) return false;
+        if (free.value === name) return false;
       }
 
       for (let s = scope; s; s = s.parent) {
@@ -94,8 +94,9 @@ class Path {
       }
 
       if (isUnique(value)) {
-        scope.free.push(value);
-        return { type: 'Identifier', value };
+        let ident = { type: 'Identifier', value };
+        scope.free.push(ident);
+        return ident;
       }
     }
   }
