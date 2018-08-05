@@ -1,13 +1,5 @@
 const { AST } = require('esparse');
 
-function mapScopes(scope, map = new Map()) {
-  if (scope.node) {
-    map.set(scope.node, scope);
-  }
-  scope.children.forEach(child => mapScopes(child, map));
-  return map;
-}
-
 class Path {
 
   constructor(node, parent = null, location = null) {
@@ -69,42 +61,32 @@ class Path {
     }
   }
 
-  uniqueIdentifier(baseName) {
-    let scope = null;
-    for (let path = this; path && !scope; path = path.parent) {
-      scope = this._scopeMap.get(path.node);
+  uniqueIdentifier(baseName, options = {}) {
+    let scope = getBlockScope(this);
+    let ident = getUniqueIdentifier(baseName, scope);
+
+    scope.free.push(ident);
+
+    if (options.kind) {
+      let { statements } = scope.node;
+      let i = 0;
+
+      while (i < statements.length) {
+        if (statements[i].type !== 'VariableDeclaration') break;
+        i += 1;
+      }
+
+      statements.splice(i, 0, {
+        type: 'VariableDeclaration',
+        kind: options.kind,
+        declarations: [{
+          type: 'VariableDeclarator',
+          pattern: { type: 'Identifier', value: ident.value },
+          initializer: options.initializer || null,
+        }],
+      });
     }
 
-    function isUnique(name) {
-      for (let free of scope.free) {
-        if (free.value === name) return false;
-      }
-
-      for (let s = scope; s; s = s.parent) {
-        if (s.names[name]) return false;
-      }
-
-      return true;
-    }
-
-    for (let i = 0; true; ++i) {
-      let value = baseName;
-      if (i > 0) {
-        value += '_' + i;
-      }
-
-      if (isUnique(value)) {
-        let ident = { type: 'Identifier', value };
-        scope.free.push(ident);
-        return ident;
-      }
-    }
-  }
-
-  uniqueVariable(baseName, options = {}) {
-    let { kind = 'let', initializer = null } = options;
-    let ident = this.uniqueIdentifier(baseName);
-    // TODO: Install a declaration in scope (what happens for function params?)
     return ident;
   }
 
@@ -114,6 +96,48 @@ class Path {
     return path;
   }
 
+}
+
+function mapScopes(scope, map = new Map()) {
+  if (scope.node) {
+    map.set(scope.node, scope);
+  }
+  scope.children.forEach(child => mapScopes(child, map));
+  return map;
+}
+
+function getBlockScope(path) {
+  while (path) {
+    let scope = path._scopeMap.get(path.node);
+    if (scope) {
+      while (scope.type !== 'block') scope = scope.parent;
+      return scope;
+    }
+    path = path.parent;
+  }
+  return null;
+}
+
+function isUniqueName(name, scope) {
+  for (let free of scope.free) {
+    if (free.value === name) return false;
+  }
+
+  for (let s = scope; s; s = s.parent) {
+    if (s.names[name]) return false;
+  }
+
+  return true;
+}
+
+function getUniqueIdentifier(name, scope) {
+  for (let i = 0; true; ++i) {
+    let value = name;
+    if (i > 0) value += '_' + i;
+    if (isUniqueName(value, scope)) {
+      return { type: 'Identifier', value };
+    }
+  }
 }
 
 module.exports = { Path };

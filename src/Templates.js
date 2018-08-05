@@ -37,7 +37,7 @@ function moduleTemplate(literals, ...values) {
         let value = values[index++];
         path.replaceNode(value);
       }
-    }
+    },
   });
 
   return result.ast;

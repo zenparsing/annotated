@@ -51,12 +51,12 @@ function startModuleTranslation() {
   // TODO: Override node and V8 error reporting to use
   // mappings from translate hook (see node-source-map-support)
   Module.prototype._compile = compileOverride;
-  return () => { Module.prototype._compile = _compile };
+  return () => { Module.prototype._compile = _compile; };
 }
 
 function shouldTranslate(filename) {
   // Don't translate files in node_modules
-  return !/[\/\\]node_modules[\/\\]/i.test(filename);
+  return !/[/\\]node_modules[/\\]/i.test(filename);
 }
 
 function compileOverride(content, filename) {

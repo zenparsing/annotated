@@ -2,6 +2,9 @@ const path = require('path');
 const { rollup } = require('rollup');
 const resolve = require('rollup-plugin-node-resolve');
 const commonjs = require('rollup-plugin-commonjs');
+const { spawnSync } = require('child_process');
+
+spawnSync('git', ['clean', '-dfX', './dist']);
 
 rollup({
   input: path.resolve(__dirname, '../src/default.js'),

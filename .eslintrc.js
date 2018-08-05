@@ -2,11 +2,11 @@ module.exports = {
   "extends": ["eslint:recommended"],
 
   "env": {
-    "es6": true
+    "es6": true,
+    "node": true
   },
 
   "globals": {
-    "window": true,
     "console": true
   },
 
@@ -43,7 +43,7 @@ module.exports = {
   },
 
   "parserOptions": {
-    "ecmaVersion": 6,
+    "ecmaVersion": 8,
     "sourceType": "script"
   }
 };

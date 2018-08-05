@@ -10,7 +10,7 @@ ModuleLoader.translate = (source, filename) => expandMacros(source, {
   location: filename,
 });
 
-function registerLoader(location) {
+function registerLoader() {
   return ModuleLoader.startTranslation();
 }
 
@@ -134,10 +134,6 @@ function runProcessors(list, registry, rootPath) {
     }
   }
 
-  // TODO: Should we perform a single tree traversal and
-  // run "global" processors on every node? This would ensure
-  // a single traversal, rather than multiple traversals
-  // for each global processor.
   for (let processor of registry.globalMacros) {
     processor(rootPath);
   }

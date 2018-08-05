@@ -37,7 +37,7 @@ export function registerMacros(api) {
     } else {
 
       // Create an identifier for the class expression
-      let  ident = path.uniqueVariable('_class', { kind: 'let' });
+      let  ident = path.uniqueIdentifier('_class', { kind: 'let' });
 
       // TODO: Is "path" always right here? It couldn't be an export
       // declaration?

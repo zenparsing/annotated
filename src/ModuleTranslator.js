@@ -37,7 +37,7 @@ class ImportExportProcessor {
     }
 
     value = '_' + from.value
-      .replace(/.*[\/\\](?=[^\/\\]+$)/, '')
+      .replace(/.*[/\\](?=[^/\\]+$)/, '')
       .replace(/\..*$/, '')
       .replace(/[^a-zA-Z0-1_$]/g, '_');
 
@@ -94,7 +94,9 @@ class ImportExportProcessor {
           if (imported) {
             if (imported.value === 'default') {
               statement = this.templates.statement`
-                const ${ local } = typeof ${ ident } === 'function' ? ${ ident } : ${ ident }.default
+                const ${ local } = typeof ${ ident } === 'function' ?
+                  ${ ident } :
+                  ${ ident }.default
               `;
             } else {
               statement = this.templates.statement`
@@ -157,7 +159,7 @@ class ImportExportProcessor {
     this.topImport.names.push({
       imported: { type: 'Identifier', value: 'default' },
       local: node.identifier,
-    })
+    });
     this.visit(node.imports);
   }
 
