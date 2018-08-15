@@ -5,7 +5,10 @@ const { Path } = require('./Path.js');
 const { generateSourceMap, encodeInlineSourceMap } = require('./SourceMap.js');
 const ModuleTranslator = require('./ModuleTranslator.js');
 const Templates = require('./Templates.js');
-const { basename } = require('path');
+
+function basename(file) {
+  return file.replace(/^[^]*[\\/]([^\\/])|[\\/]+$/g, '$1');
+}
 
 ModuleLoader.translate = (source, filename) => expandMacros(source, {
   translateModules: true,
@@ -17,40 +20,40 @@ function registerLoader() {
 }
 
 function expandMacros(source, options = {}) {
-  let result = parse(source, { module: true, resolveScopes: true });
+  let parseResult = parse(source, { module: true, resolveScopes: true });
 
   let macros = [];
   if (options.translateModules) {
     macros.push(ModuleTranslator);
   }
 
-  let rootPath = Path.fromParseResult(result);
-  let linked = linkAnnotations(rootPath, result.annotations);
-  let imports = getMacroImports(linked);
+  let rootPath = Path.fromParseResult(parseResult);
+  let linked = linkAnnotations(rootPath, parseResult.annotations);
+  let imports = getMacroImports(linked, options.imports);
   let loader = new ModuleLoader(options.location);
   let registry = registerProcessors(imports, loader, macros);
 
   runProcessors(linked, registry, rootPath);
 
-  let printResult = print(rootPath.node, { lineMap: result.lineMap });
-  let sourceMap = null;
+  let result = print(rootPath.node, { lineMap: parseResult.lineMap });
 
   if (options.sourceMap) {
-    // TODO: source map roots and everything...?
-    let name = basename(options.location);
-
-    let map = generateSourceMap(printResult.mappings, {
-      sources: [{ name, content: source, default: true }],
+    let map = generateSourceMap(result.mappings, {
+      sources: [{
+        file: basename(options.location),
+        content: source,
+        default: true,
+      }],
     });
 
     if (options.sourceMap === 'inline') {
-      printResult.output += encodeInlineSourceMap(map);
+      result.output += encodeInlineSourceMap(map);
     } else {
-      sourceMap = map;
+      result.sourceMap = map;
     }
   }
 
-  return { output: printResult.output, sourceMap };
+  return result;
 }
 
 function linkAnnotations(rootPath, annotations) {
@@ -84,9 +87,7 @@ function linkAnnotations(rootPath, annotations) {
   return output;
 }
 
-function getMacroImports(list) {
-  let modules = [];
-
+function getMacroImports(list, modules = []) {
   for (let { path, annotations } of list) {
     let { node } = path;
     let importAnnotation = null;

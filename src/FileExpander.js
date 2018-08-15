@@ -81,6 +81,7 @@ async function expandFileToString(inPath, options = {}) {
     location: inPath,
     translateModules: options.translateModules,
     sourceMap: options.sourceMap,
+    imports: options.imports,
   });
   return result.output;
 }
@@ -102,6 +103,7 @@ async function expandFile(inPath, outPath, options = {}) {
     location: inPath,
     translateModules: options.translateModules,
     sourceMap: options.sourceMap,
+    imports: options.imports,
   });
 
   if (result.sourceMap) {

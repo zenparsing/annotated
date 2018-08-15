@@ -62,6 +62,12 @@ function run() {
       case '-s':
         options.sourceMap = value || true;
         break;
+      case '-i':
+      case '--imports':
+        options.imports = (value || '').split(/\s*,\s*/g).map(name => {
+          return path.resolve(name);
+        });
+        break;
     }
   }
 

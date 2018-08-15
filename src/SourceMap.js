@@ -7,12 +7,12 @@ function generateSourceMap(mappings, options = {}) {
 
   for (let item of options.sources || []) {
     if (item.default) {
-      defaultSource = item.name;
+      defaultSource = item.file;
     }
     if (item.content) {
       hasContent = true;
     }
-    sourceData.set(item.name, item);
+    sourceData.set(item.file, item);
   }
 
   let names = new Map();
