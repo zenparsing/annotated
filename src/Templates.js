@@ -32,12 +32,20 @@ function moduleTemplate(literals, ...values) {
   let index = 0;
 
   path.visit({
+
+    Node(path) {
+      // Remove source offset data
+      path.node.start = undefined;
+      path.node.end = undefined;
+    },
+
     Identifier(path) {
       if (path.node.value === PLACEHOLDER) {
         let value = values[index++];
         path.replaceNode(value);
       }
     },
+
   });
 
   return result.ast;

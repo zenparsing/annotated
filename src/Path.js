@@ -59,6 +59,10 @@ class Path {
     if (typeof method === 'function') {
       method.call(visitor, this);
     }
+    method = visitor.Node;
+    if (typeof method === 'function') {
+      method.call(visitor, this);
+    }
   }
 
   uniqueIdentifier(baseName, options = {}) {

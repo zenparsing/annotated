@@ -1,7 +1,10 @@
+const LINK_PREFIX = '\n\n//# sourceMappingURL=';
+
 function generateSourceMap(mappings, options = {}) {
   let sourceData = new Map();
   let defaultSource = '__source__';
   let hasContent = false;
+
   for (let item of options.sources || []) {
     if (item.default) {
       defaultSource = item.name;
@@ -36,10 +39,20 @@ function generateSourceMap(mappings, options = {}) {
   return map;
 }
 
-const BASE64 =
+function encodeInlineSourceMap(sourceMap) {
+  return LINK_PREFIX + 'data:application/json;charset=utf-8;base64,' +
+    Buffer.from(JSON.stringify(sourceMap)).toString('base64');
+}
+
+function encodeSourceMapLink(target) {
+  return LINK_PREFIX + target;
+}
+
+const BASE64 = (
   'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'abcdefghijklmnopqrstuvwxyz' +
-  '0123456789+/'.split('');
+  '0123456789+/'
+).split('');
 
 function toVLQSigned(v) {
   return v < 0 ? ((-v) << 1) + 1 : (v << 1) + 0;
@@ -74,7 +87,7 @@ function mappingsEqual(a, b) {
 }
 
 function serializeMappings(mappings, names, sources, defaultSource) {
-  let prevGeneratedLine = 1;
+  let prevGeneratedLine = 0;
   let prevGeneratedColumn = 0;
   let prevOriginalLine = 0;
   let prevOriginalColumn = 0;
@@ -84,58 +97,54 @@ function serializeMappings(mappings, names, sources, defaultSource) {
 
   for (let i = 0; i < mappings.length; ++i) {
     let mapping = mappings[i];
-    let next = '';
 
     if (mapping.generated.line !== prevGeneratedLine) {
       prevGeneratedColumn = 0;
-      while (mapping.generated.line !== prevGeneratedLine) {
-        next += ';';
+      do {
+        result += ';';
         prevGeneratedLine++;
-      }
+      } while (mapping.generated.line !== prevGeneratedLine);
     } else if (i > 0) {
       if (mappingsEqual(mapping, mappings[i - 1])) {
         continue;
       }
-      next += ',';
+      result += ',';
     }
 
     // Generated column
-    next += encodeVLQ(mapping.generated.column - prevGeneratedColumn);
+    result += encodeVLQ(mapping.generated.column - prevGeneratedColumn);
     prevGeneratedColumn = mapping.generated.column;
 
     let source = mapping.source || defaultSource;
-
     if (!sources.has(source)) {
-      sources.set(source, sources.size - 1);
+      sources.set(source, sources.size);
     }
 
     // Source index
     let sourceIndex = sources.get(source);
-    next += encodeVLQ(sourceIndex - prevSource);
+    result += encodeVLQ(sourceIndex - prevSource);
     prevSource = sourceIndex;
 
     // Original line
-    next += encodeVLQ(mapping.original.line - 1 - prevOriginalLine);
-    prevOriginalLine = mapping.original.line - 1;
+    result += encodeVLQ(mapping.original.line - prevOriginalLine);
+    prevOriginalLine = mapping.original.line;
 
     // Original column
-    next += encodeVLQ(mapping.original.column - prevOriginalColumn);
+    result += encodeVLQ(mapping.original.column - prevOriginalColumn);
     prevOriginalColumn = mapping.original.column;
 
     // Identifier name index
     if (mapping.name) {
       if (!names.has(mapping.name)) {
-        names.set(mapping.name, names.size - 1);
+        names.set(mapping.name, names.size);
       }
       let nameIndex = names.get(mapping.name);
-      next += encodeVLQ(nameIndex - prevName);
+      result += encodeVLQ(nameIndex - prevName);
       prevName = nameIndex;
     }
-
-    result += next;
   }
 
   return result;
 }
 
-module.exports = { generateSourceMap };
+module.exports = { generateSourceMap, encodeInlineSourceMap, encodeSourceMapLink };

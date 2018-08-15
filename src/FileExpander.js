@@ -1,5 +1,5 @@
 const { expandMacros } = require('./MacroExpander.js');
-const { generateSourceMap } = require('./SourceMap.js');
+const { encodeSourceMapLink } = require('./SourceMap.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -80,6 +80,7 @@ async function expandFileToString(inPath, options = {}) {
   let result = expandMacros(source, {
     location: inPath,
     translateModules: options.translateModules,
+    sourceMap: options.sourceMap,
   });
   return result.output;
 }
@@ -100,19 +101,12 @@ async function expandFile(inPath, outPath, options = {}) {
   let result = expandMacros(source, {
     location: inPath,
     translateModules: options.translateModules,
+    sourceMap: options.sourceMap,
   });
 
-  if (options.sourceMap) {
-    // TODO: Allow inline source maps?
-    let file = path.basename(outPath);
-    let sourceMap = generateSourceMap(result.mappings, {
-      file,
-      // TODO: Name should be different
-      sources: [{ name: file, content: source, default: true }],
-    });
-
-    await writeOutput(outPath + '.map', JSON.stringify(sourceMap));
-    result.output += `\n\n//# sourceMappingURL=${ file }.map`;
+  if (result.sourceMap) {
+    await writeOutput(outPath + '.map', JSON.stringify(result.sourceMap));
+    result.output += encodeSourceMapLink(`${ path.basename(outPath) }.map`);
   }
 
   await writeOutput(outPath, result.output);

@@ -2,8 +2,10 @@ const { parse, print } = require('esparse');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Path } = require('./Path.js');
+const { generateSourceMap, encodeInlineSourceMap } = require('./SourceMap.js');
 const ModuleTranslator = require('./ModuleTranslator.js');
 const Templates = require('./Templates.js');
+const { basename } = require('path');
 
 ModuleLoader.translate = (source, filename) => expandMacros(source, {
   translateModules: true,
@@ -30,7 +32,25 @@ function expandMacros(source, options = {}) {
 
   runProcessors(linked, registry, rootPath);
 
-  return print(rootPath.node, { lineMap: result.lineMap });
+  let printResult = print(rootPath.node, { lineMap: result.lineMap });
+  let sourceMap = null;
+
+  if (options.sourceMap) {
+    // TODO: source map roots and everything...?
+    let name = basename(options.location);
+
+    let map = generateSourceMap(printResult.mappings, {
+      sources: [{ name, content: source, default: true }],
+    });
+
+    if (options.sourceMap === 'inline') {
+      printResult.output += encodeInlineSourceMap(map);
+    } else {
+      sourceMap = map;
+    }
+  }
+
+  return { output: printResult.output, sourceMap };
 }
 
 function linkAnnotations(rootPath, annotations) {
