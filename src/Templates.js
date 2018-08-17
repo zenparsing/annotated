@@ -7,6 +7,10 @@ function statement(literals, ...values) {
   return moduleTemplate(literals, ...values).statements[0];
 }
 
+function statementList(literals, ...values) {
+  return moduleTemplate(literals, ...values).statements;
+}
+
 function expression(literals, ...values) {
   return moduleTemplate(literals, ...values).statements[0].expression;
 }
@@ -51,4 +55,4 @@ function moduleTemplate(literals, ...values) {
   return result.ast;
 }
 
-module.exports = { module: moduleTemplate, statement, expression };
+module.exports = { module: moduleTemplate, statement, statementList, expression };
