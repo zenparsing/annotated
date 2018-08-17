@@ -1,9 +1,9 @@
 @import '../macros/bound-methods.js';
 @import '../macros/observed.js';
+@import '../macros/soft-private.js';
 
 class Counter extends HTMLElement {
-  //@observed
-  _x = 0;
+  @observed _x = 0;
 
   @bound
   _clicked() {

@@ -38,14 +38,29 @@ class Path {
 
     if (this._parent) {
       let { key, index } = this._location;
+      let node = this._node;
       let parentNode = this._parent._node;
 
       if (typeof index !== 'number') {
         parentNode[key] = newNode;
-      } else if (newNode) {
-        parentNode[key].splice(index, 1, newNode);
       } else {
-        parentNode[key].splice(index, 1);
+        let list = parentNode[key];
+
+        // Fix index if no longer valid
+        if (list[index] !== node) {
+          for (let i = 0; i < list.length; ++i) {
+            if (list[i] === node) {
+              this._location.index = index = i;
+              break;
+            }
+          }
+        }
+
+        if (newNode) {
+          list.splice(index, 1, newNode);
+        } else {
+          list.splice(index, 1);
+        }
       }
     }
 

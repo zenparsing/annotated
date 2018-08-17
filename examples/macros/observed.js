@@ -8,7 +8,7 @@ export function registerMacros(api) {
 
     path.node.name = {
       type: 'ComputedPropertyName',
-      expression: path.uniqueIdentifier('_' + name.value, {
+      expression: path.uniqueIdentifier(name.value + '$', {
         kind: 'const',
         initializer: {
           type: 'CallExpression',
