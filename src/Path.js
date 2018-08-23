@@ -22,6 +22,9 @@ class Path {
   }
 
   forEachChild(fn) {
+    if (!this._node) {
+      return;
+    }
     AST.forEachChild(this._node, (child, key, index) => {
       fn(new Path(child, this, { key, index }));
     });
@@ -72,10 +75,19 @@ class Path {
   visit(visitor) {
     // TODO: should we support preorder/postorder/both?
     this.forEachChild(childPath => childPath.visit(visitor));
+    if (!this._node) {
+      return;
+    }
+
     let method = visitor[this._node.type];
     if (typeof method === 'function') {
       method.call(visitor, this);
     }
+
+    if (!this._node) {
+      return;
+    }
+
     method = visitor.Node;
     if (typeof method === 'function') {
       method.call(visitor, this);

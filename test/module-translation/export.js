@@ -8,6 +8,13 @@ test('export default from', `
 `);
 
 test('export namespace', `
+  export * from 'a';
+`, `
+  'use strict';
+  Object.assign(exports, require('a'));
+`);
+
+test('export namespace with name', `
   export * as x from 'a';
 `, `
   'use strict';
