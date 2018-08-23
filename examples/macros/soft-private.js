@@ -1,32 +1,33 @@
-export function registerMacros(api) {
-  api.define(rootPath => rootPath.visit(new class SoftPrivateVisitor {
+export function registerMacros({ define, AST }) {
+  define(rootPath => rootPath.visit(new class SoftPrivateVisitor {
 
     constructor() {
       this.names = new Map();
     }
 
     getSymbolIdentifier(name) {
-      if (name.startsWith('_')) {
-        let value = this.names.get(name);
-        if (value) {
-          return { type: 'Identifier', value };
-        }
-        let ident = rootPath.uniqueIdentifier(name);
-        this.names.set(name, ident.value);
-        return ident;
+      if (!name.startsWith('_')) {
+        return null;
       }
 
-      return null;
-    }
+      let value = this.names.get(name);
+      if (value) {
+        return new AST.Identifier(value);
+      }
 
-    Module({ node }) {
-      let statements = Array.from(this.names).map(([key, value]) => {
-        let ident = { type: 'Identifier', value };
-        let name = { type: 'StringLiteral', value: key };
-        return api.templates.statement`const ${ ident } = Symbol(${ name })`;
+      let symbolName = name.slice(1);
+
+      let ident = rootPath.uniqueIdentifier(symbolName, {
+        kind: 'const',
+        initializer: new AST.CallExpression(
+          new AST.Identifier('Symbol'),
+          [new AST.StringLiteral(symbolName)]
+        ),
       });
 
-      node.statements.unshift(...statements);
+      this.names.set(name, ident.value);
+
+      return ident;
     }
 
     MemberExpression({ node }) {
@@ -34,10 +35,7 @@ export function registerMacros(api) {
       if (property.type === 'Identifier') {
         let name = this.getSymbolIdentifier(property.value);
         if (name) {
-          node.property = {
-            type: 'ComputedPropertyName',
-            expression: name,
-          };
+          node.property = new AST.ComputedPropertyName(name);
         }
       }
     }
@@ -64,10 +62,7 @@ export function registerMacros(api) {
       if (node.name.type === 'Identifier') {
         let name = this.getSymbolIdentifier(node.name.value);
         if (name) {
-          node.name = {
-            type: 'ComputedPropertyName',
-            expression: name,
-          };
+          node.name = new AST.ComputedPropertyName(name);
         }
       }
     }

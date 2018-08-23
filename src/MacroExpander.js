@@ -1,4 +1,4 @@
-const { parse, print } = require('esparse');
+const { parse, print, AST } = require('esparse');
 const { ModuleLoader } = require('./ModuleLoader.js');
 const { MacroRegistry } = require('./MacroRegistry.js');
 const { Path } = require('./Path.js');
@@ -122,12 +122,13 @@ function registerProcessors(imports, loader, macros) {
   let api = {
     define(name, processor) { registry.define(name, processor); },
     templates: Templates,
+    AST,
   };
 
   for (let specifier of imports) {
     let module = loader.load(specifier);
     if (typeof module.registerMacros !== 'function') {
-      throw new Error(`Module ${ specifier } does not export a reigsterMacros function`);
+      throw new Error(`Module ${ specifier } does not export a registerMacros function`);
     }
 
     module.registerMacros(api);

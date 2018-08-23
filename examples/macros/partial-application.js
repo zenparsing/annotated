@@ -1,5 +1,5 @@
-export function registerMacros(api) {
-  api.define(rootPath => rootPath.visit(new class PartialApplicationVisitor {
+export function registerMacros({ define, templates, AST }) {
+  define(rootPath => rootPath.visit(new class PartialApplicationVisitor {
 
     CallExpression(path) {
       let { node } = path;
@@ -9,23 +9,16 @@ export function registerMacros(api) {
       for (let i = 0; i < args.length; ++i) {
         let arg = args[i];
         if (arg.type === 'Identifier' && arg.value === '$') {
-          args[i] = {
-            type: 'MemberExpression',
-            object: { type: 'Identifier', value: '$$' },
-            property: {
-              type: 'ComputedPropertyName',
-              expression: {
-                type: 'NumberLiteral',
-                value: i,
-              },
-            },
-          };
+          args[i] = new AST.MemberExpression(
+            new AST.Identifier('$$'),
+            new AST.ComputedPropertyName(new AST.NumberLiteral(i))
+          );
           hasPlaceholder = true;
         }
       }
 
       if (hasPlaceholder) {
-        path.replaceNode(api.templates.expression`((...$$) => ${ node })`);
+        path.replaceNode(templates.expression`((...$$) => ${ node })`);
       }
     }
 

@@ -1,57 +1,36 @@
-export function registerMacros(api) {
-  api.define('observed', path => {
+export function registerMacros({ define, templates, AST }) {
+  define('observed', path => {
     if (path.node.type !== 'ClassField' || path.node.static) {
       throw new SyntaxError('@observed can only be applied to class instance fields');
     }
 
     let { name } = path.node;
+    let symbolName = '$' + name.value.replace(/^_/, '');
 
-    path.node.name = {
-      type: 'ComputedPropertyName',
-      expression: path.uniqueIdentifier(name.value + '$', {
+    path.node.name = new AST.ComputedPropertyName(
+      path.uniqueIdentifier(symbolName, {
         kind: 'const',
-        initializer: {
-          type: 'CallExpression',
-          callee: { type: 'Identifier', value: 'Symbol' },
-          arguments: [{ type: 'StringLiteral', value: name.value }],
-        },
-      }),
-    };
+        initializer: new AST.CallExpression(
+          new AST.Identifier('Symbol'),
+          [new AST.StringLiteral(symbolName)]
+        ),
+      })
+    );
 
-    let { elements } = path.parentNode;
-    let index = elements.indexOf(path.node) + 1;
-
-    elements.splice(index, 0, {
-      type: 'MethodDefinition',
-      static: false,
-      kind: 'get',
-      name,
-      params: [],
-      body: {
-        type: 'FunctionBody',
-        statements: [{
-          type: 'ReturnStatement',
-          argument: {
-            type: 'MemberExpression',
-            object: { type: 'ThisExpression' },
-            property: path.node.name,
-          },
-        }],
-      },
-    }, {
-      type: 'MethodDefinition',
-      static: false,
-      kind: 'set',
-      name,
-      params: [{ type: 'Identifier', value: 'v' }],
-      body: {
-        type: 'FunctionBody',
-        statements: api.templates.statementList`
-          this.${ path.node.name } = v;
+    path.insertNodesAfter(
+      new AST.MethodDefinition(false, 'get', name, [], new AST.FunctionBody([
+        new AST.ReturnStatement(
+          new AST.MemberExpression(new AST.ThisExpression(), path.node.name)
+        )
+      ])),
+      new AST.MethodDefinition(false, 'set', name,
+        [new AST.Identifier('value')],
+        new AST.FunctionBody(templates.statementList`
+          this.${ path.node.name } = value;
           window.requestAnimationFrame(() => this.render());
-        `,
-      },
-    });
+        `)
+      )
+    );
 
   });
 }

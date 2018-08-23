@@ -37,34 +37,36 @@ class Path {
     }
 
     if (this._parent) {
-      let { key, index } = this._location;
-      let node = this._node;
-      let parentNode = this._parent._node;
-
-      if (typeof index !== 'number') {
-        parentNode[key] = newNode;
-      } else {
-        let list = parentNode[key];
-
-        // Fix index if no longer valid
-        if (list[index] !== node) {
-          for (let i = 0; i < list.length; ++i) {
-            if (list[i] === node) {
-              this._location.index = index = i;
-              break;
-            }
-          }
-        }
-
-        if (newNode) {
-          list.splice(index, 1, newNode);
+      getLocation(this, (parent, key, index) => {
+        if (typeof index !== 'number') {
+          parent[key] = newNode;
+        } else if (newNode) {
+          parent[key].splice(index, 1, newNode);
         } else {
-          list.splice(index, 1);
+          parent[key].splice(index, 1);
         }
-      }
+      });
     }
 
     this._node = newNode;
+  }
+
+  insertNodesAfter(...nodes) {
+    getLocation(this, (parent, key, index) => {
+      if (typeof index !== 'number') {
+        throw new Error('Node is not contained within a node list');
+      }
+      parent[key].splice(index + 1, 0, ...nodes);
+    });
+  }
+
+  insertNodesBefore(...nodes) {
+    getLocation(this, (parent, key, index) => {
+      if (typeof index !== 'number') {
+        throw new Error('Node is not contained within a node list');
+      }
+      parent[key].splice(index, 0, ...nodes);
+    });
   }
 
   visit(visitor) {
@@ -115,6 +117,36 @@ class Path {
     return path;
   }
 
+}
+
+function getLocation(path, fn) {
+  if (!path._parent) {
+    throw new Error('Node does not have a parent');
+  }
+
+  let { key, index } = path._location;
+  let node = path._node;
+  let parent = path._parent._node;
+
+  let valid = typeof index === 'number' ?
+    parent[key][index] === node :
+    parent[key] === node;
+
+  if (!valid) {
+    AST.forEachChild(parent, (child, k, i, stop) => {
+      if (child === node) {
+        valid = true;
+        path._location = { key: (key = k), index: (index = i) };
+        return stop;
+      }
+    });
+  }
+
+  if (!valid) {
+    throw new Error('Unable to determine node location');
+  }
+
+  fn(parent, key, index);
 }
 
 function mapScopes(scope, map = new Map()) {

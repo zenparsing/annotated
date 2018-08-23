@@ -1,5 +1,5 @@
-export function registerMacros(api) {
-  api.define('bound', path => {
+export function registerMacros({ define, AST }) {
+  define('bound', path => {
     if (
       path.node.type !== 'MethodDefinition' ||
       path.parentNode.type !== 'ClassBody'
@@ -7,6 +7,7 @@ export function registerMacros(api) {
       throw new SyntaxError('@bound can only be applied to method definitions in classes');
     }
 
+    let { node } = path;
     let { elements } = path.parentNode;
     let index = 0;
 
@@ -14,24 +15,16 @@ export function registerMacros(api) {
       index++;
     }
 
-    elements.splice(index, 0, {
-      type: 'ClassField',
-      static: path.node.static,
-      name: path.node.name,
-      initializer: {
-        type: 'CallExpression',
-        callee: {
-          type: 'MemberExpression',
-          object: {
-            type: 'MemberExpression',
-            object: { type: 'ThisExpression' },
-            property: path.node.name,
-          },
-          property: { type: 'Identifier', value: 'bind' },
-        },
-        arguments: [{ type: 'ThisExpression' }],
-      },
-    });
-
+    elements.splice(index, 0, new AST.ClassField(
+      node.static,
+      node.name,
+      new AST.CallExpression(
+        new AST.MemberExpression(
+          new AST.MemberExpression(new AST.ThisExpression(), node.name),
+          new AST.Identifier('bind')
+        ),
+        [new AST.ThisExpression()]
+      )
+    ));
   });
 }

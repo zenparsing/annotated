@@ -24,9 +24,9 @@ export function registerMacros(api) {
       if (!classNode.identifier) {
         classNode.identifier = path.uniqueIdentifier('_class');
       }
+
       // Insert a define statement after class definition
-      let { statements } = path.parentNode;
-      statements.splice(statements.indexOf(node) + 1, 0, api.templates.statement`
+      path.insertNodesAfter(api.templates.statement`
         window.customElements.define(
           ${ specifier },
           ${ classNode.identifier },
