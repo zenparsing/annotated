@@ -1,21 +1,21 @@
-const { parse } = require('esparse');
-const { Path } = require('./Path.js');
+import { parse } from 'esparse';
+import { Path } from './Path.js';
 
 const PLACEHOLDER = '$$MACRO$$';
 
-function statement(literals, ...values) {
+export function statement(literals, ...values) {
   return moduleTemplate(literals, ...values).statements[0];
 }
 
-function statementList(literals, ...values) {
+export function statementList(literals, ...values) {
   return moduleTemplate(literals, ...values).statements;
 }
 
-function expression(literals, ...values) {
+export function expression(literals, ...values) {
   return moduleTemplate(literals, ...values).statements[0].expression;
 }
 
-function moduleTemplate(literals, ...values) {
+export function moduleTemplate(literals, ...values) {
   let source = '';
 
   if (typeof literals === 'string') {
@@ -54,5 +54,3 @@ function moduleTemplate(literals, ...values) {
 
   return result.ast;
 }
-
-module.exports = { module: moduleTemplate, statement, statementList, expression };

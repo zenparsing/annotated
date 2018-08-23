@@ -1,4 +1,4 @@
-function registerMacros({ define, templates, AST }) {
+export function registerMacros({ define, templates, AST }) {
   define(rootPath => new ImportExportProcessor().execute(rootPath));
 
   class ImportExportProcessor {
@@ -330,5 +330,3 @@ function registerMacros({ define, templates, AST }) {
 
   }
 }
-
-module.exports = { registerMacros };

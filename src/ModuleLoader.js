@@ -1,9 +1,9 @@
-const Module = require('module');
-const path = require('path');
+import Module from 'module';
+import * as path from 'path';
 
 let translate = source => ({ output: source });
 
-class ModuleLoader {
+export class ModuleLoader {
 
   constructor(location) {
     if (!location) {
@@ -70,5 +70,3 @@ function removeShebang(content) {
   let match = content.startsWith('#!') && /[\r\n]/.exec(content);
   return match ? content.slice(match.index) : content;
 }
-
-module.exports = { ModuleLoader };

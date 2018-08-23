@@ -1,7 +1,7 @@
-const { expandMacros } = require('./MacroExpander.js');
-const { encodeSourceMapLink } = require('./SourceMap.js');
-const fs = require('fs');
-const path = require('path');
+import { expandMacros } from './MacroExpander.js';
+import { encodeSourceMapLink } from './SourceMap.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 function getStat(p) {
   return new Promise((resolve, reject) => {
@@ -74,7 +74,7 @@ function writeOutput(path, content) {
   });
 }
 
-async function expandFileToString(inPath, options = {}) {
+export async function expandFileToString(inPath, options = {}) {
   inPath = path.resolve(inPath);
   let source = await readInput(inPath);
   let result = expandMacros(source, {
@@ -86,7 +86,7 @@ async function expandFileToString(inPath, options = {}) {
   return result.output;
 }
 
-async function expandFile(inPath, outPath, options = {}) {
+export async function expandFile(inPath, outPath, options = {}) {
   inPath = path.resolve(inPath);
   outPath = path.resolve(outPath);
 
@@ -114,7 +114,7 @@ async function expandFile(inPath, outPath, options = {}) {
   await writeOutput(outPath, result.output);
 }
 
-async function expandFolder(inPath, outPath, options = {}) {
+export async function expandFolder(inPath, outPath, options = {}) {
   inPath = path.resolve(inPath);
   outPath = path.resolve(outPath);
 
@@ -136,5 +136,3 @@ async function expandFolder(inPath, outPath, options = {}) {
     }
   }
 }
-
-module.exports = { expandFileToString, expandFile, expandFolder };

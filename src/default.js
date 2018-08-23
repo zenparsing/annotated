@@ -1,4 +1,2 @@
-module.exports = Object.assign({},
-  require('./MacroExpander.js'),
-  require('./FileExpander.js')
-);
+export * from './MacroExpander.js';
+export * from './FileExpander.js';

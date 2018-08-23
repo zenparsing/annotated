@@ -1,6 +1,6 @@
 const LINK_PREFIX = '\n\n//# sourceMappingURL=';
 
-function generateSourceMap(mappings, options = {}) {
+export function generateSourceMap(mappings, options = {}) {
   let sourceData = new Map();
   let defaultSource = '__source__';
   let hasContent = false;
@@ -39,12 +39,12 @@ function generateSourceMap(mappings, options = {}) {
   return map;
 }
 
-function encodeInlineSourceMap(sourceMap) {
+export function encodeInlineSourceMap(sourceMap) {
   return LINK_PREFIX + 'data:application/json;charset=utf-8;base64,' +
     Buffer.from(JSON.stringify(sourceMap)).toString('base64');
 }
 
-function encodeSourceMapLink(target) {
+export function encodeSourceMapLink(target) {
   return LINK_PREFIX + target;
 }
 
@@ -146,5 +146,3 @@ function serializeMappings(mappings, names, sources, defaultSource) {
 
   return result;
 }
-
-module.exports = { generateSourceMap, encodeInlineSourceMap, encodeSourceMapLink };

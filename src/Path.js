@@ -1,6 +1,6 @@
-const { AST } = require('esparse');
+import { AST } from 'esparse';
 
-class Path {
+export class Path {
 
   constructor(node, parent = null, location = null) {
     this._node = node;
@@ -202,5 +202,3 @@ function getUniqueIdentifier(name, scope) {
     }
   }
 }
-
-module.exports = { Path };

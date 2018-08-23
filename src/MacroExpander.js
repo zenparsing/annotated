@@ -1,10 +1,10 @@
-const { parse, print, AST } = require('esparse');
-const { ModuleLoader } = require('./ModuleLoader.js');
-const { MacroRegistry } = require('./MacroRegistry.js');
-const { Path } = require('./Path.js');
-const { generateSourceMap, encodeInlineSourceMap } = require('./SourceMap.js');
-const ModuleTranslator = require('./ModuleTranslator.js');
-const Templates = require('./Templates.js');
+import { parse, print, AST } from 'esparse';
+import { ModuleLoader } from './ModuleLoader.js';
+import { MacroRegistry } from './MacroRegistry.js';
+import { Path } from './Path.js';
+import { generateSourceMap, encodeInlineSourceMap } from './SourceMap.js';
+import * as ModuleTranslator from './ModuleTranslator.js';
+import * as Templates from './Templates.js';
 
 function basename(file) {
   return file.replace(/^[^]*[\\/]([^\\/])|[\\/]+$/g, '$1');
@@ -15,11 +15,11 @@ ModuleLoader.translate = (source, filename) => expandMacros(source, {
   location: filename,
 });
 
-function registerLoader() {
+export function registerLoader() {
   return ModuleLoader.startTranslation();
 }
 
-function expandMacros(source, options = {}) {
+export function expandMacros(source, options = {}) {
   let parseResult = parse(source, { module: true, resolveScopes: true });
 
   let macros = [];
@@ -160,5 +160,3 @@ function runProcessors(list, registry, rootPath) {
     processor(rootPath);
   }
 }
-
-module.exports = { expandMacros, registerLoader };
