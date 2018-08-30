@@ -79,9 +79,9 @@ function run() {
     }
     promise = lib.expandFileToString(inPath, options).then(console.log);
   } else if (folder) {
-    promise = lib.expandFolder(inPath, outPath, options).catch(fail);
+    promise = lib.expandFolder(inPath, outPath, options);
   } else {
-    promise = lib.expandFile(inPath, outPath, options).catch(fail);
+    promise = lib.expandFile(inPath, outPath, options);
   }
 
   promise.catch(fail);
