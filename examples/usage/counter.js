@@ -1,5 +1,5 @@
 @macro import '../macros/bound-methods.js';
-@macro import '../macros/soft-private.js';
+@macro import '../macros/symbol-names.js';
 @macro import '../macros/observed.js';
 @macro import '../macros/custom-element.js';
 

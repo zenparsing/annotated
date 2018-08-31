@@ -1,7 +1,7 @@
-@macro import '../macros/soft-private.js';
+@macro import '../macros/symbol-names.js';
 
 export class C {
-  //_x = 1;
+  _x = 1;
 
   constructor() {
     this._x = 1;
