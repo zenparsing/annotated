@@ -1,4 +1,4 @@
-@import '../macros/bound-methods.js';
+@macro import '../macros/bound-methods.js';
 
 class C {
 

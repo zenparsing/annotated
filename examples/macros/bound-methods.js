@@ -11,6 +11,7 @@ export function registerMacros({ define, AST }) {
     let { elements } = path.parentNode;
     let index = 0;
 
+    // Insert after the all leading class field elements
     while (elements[index].type === 'ClassField') {
       index++;
     }

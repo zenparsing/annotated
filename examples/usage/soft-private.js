@@ -1,4 +1,4 @@
-@import '../macros/soft-private.js';
+@macro import '../macros/soft-private.js';
 
 export class C {
   //_x = 1;

@@ -1,4 +1,4 @@
-@import '../macros/observed.js';
+@macro import '../macros/observed.js';
 
 class C {
   @observed

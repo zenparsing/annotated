@@ -1,4 +1,4 @@
-@import '../macros/partial-application.js';
+@macro import '../macros/partial-application.js';
 
 function add(a, b) { return a + b; }
 

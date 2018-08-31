@@ -30,8 +30,11 @@ export class ModuleLoader {
     }
   }
 
-  static startTranslation(fn) {
+  static setTranslator(fn) {
     translate = fn;
+  }
+
+  static startTranslation() {
     return startModuleTranslation();
   }
 

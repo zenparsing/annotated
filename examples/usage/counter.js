@@ -1,7 +1,7 @@
-@import '../macros/bound-methods.js';
-@import '../macros/soft-private.js';
-@import '../macros/observed.js';
-@import '../macros/custom-element.js';
+@macro import '../macros/bound-methods.js';
+@macro import '../macros/soft-private.js';
+@macro import '../macros/observed.js';
+@macro import '../macros/custom-element.js';
 
 @customElement('my-counter')
 class Counter extends HTMLElement {

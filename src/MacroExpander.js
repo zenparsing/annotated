@@ -10,13 +10,15 @@ function basename(file) {
   return file.replace(/^[^]*[\\/]([^\\/])|[\\/]+$/g, '$1');
 }
 
-export function registerLoader() {
-  return ModuleLoader.startTranslation((source, filename) => {
-    return expandMacros(source, {
-      translateModules: true,
-      location: filename,
-    });
+ModuleLoader.setTranslator((source, filename) => {
+  return expandMacros(source, {
+    translateModules: true,
+    location: filename,
   });
+});
+
+export function registerLoader() {
+  return ModuleLoader.startTranslation();
 }
 
 export function expandMacros(source, options = {}) {
@@ -90,27 +92,26 @@ function linkAnnotations(rootPath, annotations) {
 function getMacroImports(list, modules = []) {
   for (let { path, annotations } of list) {
     let { node } = path;
-    let importAnnotation = null;
+    let macroAnnotation = null;
 
     for (let annotation of annotations) {
       if (annotation.path.length > 1) break;
       let first = annotation.path[0];
-      if (first.value !== 'import') break;
-      importAnnotation = first;
+      if (first.value !== 'macro') break;
+      macroAnnotation = first;
       break;
     }
 
-    if (!importAnnotation) continue;
+    if (!macroAnnotation) continue;
 
     if (
       annotations.length > 1 ||
-      node.type !== 'ExpressionStatement' ||
-      node.expression.type !== 'StringLiteral'
-    ) {
+      node.type !== 'ImportDeclaration' ||
+      node.imports !== null) {
       throw new SyntaxError('Invalid macro import declaration');
     }
 
-    modules.push(node.expression.value);
+    modules.push(node.from.value);
   }
 
   return modules;
@@ -134,7 +135,7 @@ function registerProcessors(imports, loader, macros) {
     module.registerMacros(api);
   }
 
-  api.define('import', path => path.removeNode());
+  api.define('macro', path => path.removeNode());
 
   for (let module of macros) {
     module.registerMacros(api);
