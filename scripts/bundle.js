@@ -7,7 +7,7 @@ const { spawnSync } = require('child_process');
 spawnSync('git', ['clean', '-dfX', './dist']);
 
 rollup({
-  input: path.resolve(__dirname, '../src/default.js'),
+  input: path.resolve(__dirname, '../src/index.js'),
   plugins: [resolve(), commonjs()],
   external: ['path', 'fs', 'module'],
 }).then(bundle => {

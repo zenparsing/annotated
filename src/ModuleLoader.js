@@ -1,7 +1,7 @@
 import Module from 'module';
 import * as path from 'path';
 
-let translate = source => ({ output: source });
+let translate = null;
 
 const translationMappings = new Map();
 
@@ -30,39 +30,32 @@ export class ModuleLoader {
     }
   }
 
-  static get translate() {
-    return translate;
-  }
-
-  static set translate(value) {
-    translate = value;
-  }
-
-  static startTranslation() {
+  static startTranslation(fn) {
+    translate = fn;
     return startModuleTranslation();
   }
 
 }
 
-let _compile = null;
-let prepareStackTrace = null;
+let originals = null;
 
 function startModuleTranslation() {
-  if (_compile) {
+  if (originals) {
     return () => {};
   }
 
-  prepareStackTrace = Error.prepareStackTrace;
+  originals = {
+    prepareStackTrace: Error.prepareStackTrace,
+    compile: Module.prototype._compile,
+  };
+
+  Module.prototype._compile = compileOverride;
   Error.prepareStackTrace = prepareStackTraceOverride;
 
-  _compile = Module.prototype._compile;
-  Module.prototype._compile = compileOverride;
-
   return () => {
-    Module.prototype._compile = _compile;
-    Error.prepareStackTrace = prepareStackTrace;
-    _compile = null;
-    prepareStackTrace = null;
+    Module.prototype._compile = originals.compile;
+    Error.prepareStackTrace = originals.prepareStackTrace;
+    originals = null;
   };
 }
 
@@ -79,7 +72,7 @@ function compileOverride(content, filename) {
       translationMappings.set(filename, result.mappings);
     }
   }
-  return _compile.call(this, content, filename);
+  return originals.compile.call(this, content, filename);
 }
 
 function removeShebang(content) {
@@ -88,96 +81,96 @@ function removeShebang(content) {
 }
 
 function prepareStackTraceOverride(error, stack) {
-  function mapPosition(mappings, line, column) {
-    let right = mappings.length - 1;
-    let left = 0;
-
-    if (right < 0) {
-      return { line, column };
-    }
-
-    // Binary search over generated position
-    while (left <= right) {
-      let mid = (left + right) >> 1;
-      let { generated } = mappings[mid];
-
-      if (generated.line === line && generated.column === column) {
-        right = mid;
-        break;
-      }
-
-      if (
-        generated.line < line ||
-        generated.line === line && generated.column < column) {
-        left = mid + 1;
-      } else {
-        right = mid - 1;
-      }
-    }
-
-    return mappings[right].original;
-  }
-
-  function stringifyCallSite(callSite) {
-    if (callSite.isNative() || callSite.isEval()) {
-      return null;
-    }
-
-    let source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-    if (!source) {
-      return null;
-    }
-
-    let mappings = translationMappings.get(source);
-    if (!mappings) {
-      return null;
-    }
-
-    let line = callSite.getLineNumber();
-    let column = callSite.getColumnNumber();
-    if (typeof line !== 'number' || typeof column !== 'number') {
-      return null;
-    }
-
-    // Remove node CJS wrapper header
-    let headerLength = 62;
-    if (line === 1 && column > headerLength && !callSite.isEval()) {
-      column -= headerLength;
-    }
-
-    ({ line, column } = mapPosition(mappings, line - 1, column - 1));
-
-    let location = `(${ source }:${ line + 1 }:${ column + 1 })`;
-    let functionName = callSite.getFunctionName();
-
-    if (callSite.isConstructor()) {
-      return `new ${ functionName || '<anonymous>' } ${ location }`;
-    }
-
-    let methodName = callSite.getMethodName();
-    if (methodName) {
-      let typeName = callSite.getTypeName();
-      if (!functionName) {
-        functionName = `${ typeName }.${ methodName || '<anonymous>' }`;
-      } else {
-        if (!functionName.startsWith(typeName)) {
-          functionName = typeName + '.' + functionName;
-        }
-        if (methodName && !functionName.endsWith('.' + methodName)) {
-          functionName += `[as ${ methodName }]`;
-        }
-      }
-    }
-
-    if (functionName) {
-      return `${ functionName } ${ location }`;
-    }
-
-    return location;
-  }
-
   return error + stack
     .map(callSite => stringifyCallSite(callSite) || String(callSite))
     .map(frameString => '\n    at ' + frameString)
     .join('');
+}
+
+function mapSourcePosition(mappings, line, column) {
+  let right = mappings.length - 1;
+  let left = 0;
+
+  if (right < 0) {
+    return { line, column };
+  }
+
+  // Binary search over generated position
+  while (left <= right) {
+    let mid = (left + right) >> 1;
+    let { generated } = mappings[mid];
+
+    if (generated.line === line && generated.column === column) {
+      right = mid;
+      break;
+    }
+
+    if (
+      generated.line < line ||
+      generated.line === line && generated.column < column) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  return mappings[right].original;
+}
+
+function stringifyCallSite(callSite) {
+  if (callSite.isNative() || callSite.isEval()) {
+    return null;
+  }
+
+  let source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
+  if (!source) {
+    return null;
+  }
+
+  let mappings = translationMappings.get(source);
+  if (!mappings) {
+    return null;
+  }
+
+  let line = callSite.getLineNumber();
+  let column = callSite.getColumnNumber();
+  if (typeof line !== 'number' || typeof column !== 'number') {
+    return null;
+  }
+
+  // Remove node CJS wrapper header
+  let headerLength = 62;
+  if (line === 1 && column > headerLength && !callSite.isEval()) {
+    column -= headerLength;
+  }
+
+  ({ line, column } = mapSourcePosition(mappings, line - 1, column - 1));
+
+  let location = `(${ source }:${ line + 1 }:${ column + 1 })`;
+  let functionName = callSite.getFunctionName();
+
+  if (callSite.isConstructor()) {
+    return `new ${ functionName || '<anonymous>' } ${ location }`;
+  }
+
+  let methodName = callSite.getMethodName();
+  if (methodName) {
+    let typeName = callSite.getTypeName();
+    if (!functionName) {
+      functionName = `${ typeName }.${ methodName || '<anonymous>' }`;
+    } else {
+      if (!functionName.startsWith(typeName)) {
+        functionName = typeName + '.' + functionName;
+      }
+      if (methodName && !functionName.endsWith('.' + methodName)) {
+        functionName += `[as ${ methodName }]`;
+      }
+    }
+  }
+
+  if (functionName) {
+    return `${ functionName } ${ location }`;
+  }
+
+  return location;
 }

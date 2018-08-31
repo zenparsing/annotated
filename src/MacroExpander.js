@@ -10,13 +10,13 @@ function basename(file) {
   return file.replace(/^[^]*[\\/]([^\\/])|[\\/]+$/g, '$1');
 }
 
-ModuleLoader.translate = (source, filename) => expandMacros(source, {
-  translateModules: true,
-  location: filename,
-});
-
 export function registerLoader() {
-  return ModuleLoader.startTranslation();
+  return ModuleLoader.startTranslation((source, filename) => {
+    return expandMacros(source, {
+      translateModules: true,
+      location: filename,
+    });
+  });
 }
 
 export function expandMacros(source, options = {}) {

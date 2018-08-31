@@ -1,4 +1,4 @@
-import { expandMacros } from '../../src/default.js';
+import { expandMacros } from '../../src/index.js';
 import * as assert from 'assert';
 
 function normalize(code) {
