@@ -4,11 +4,13 @@ An experimental JavaScript superset language.
 
 ```js
 // Import a macro definition
-@macro import './http-route-macros';
+@macro import './custom-element-macros';
 
-// Apply a macro to a function
-@http.get('/hello')
-export function helloWorld(req, res) {
-  res.send('hello world');
+// Apply a macro to a class
+@customElement('hello-world')
+class HelloWorld extends HTMLElement {
+  connectedCallback() {
+    this.textContent = 'hello world';
+  }
 }
 ```

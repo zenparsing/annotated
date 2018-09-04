@@ -1,6 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const { registerLoader } = require('../');
+
+let registerLoader;
+
+try {
+  ({ registerLoader } = require('../'));
+} catch (err) {
+  require('child_process').spawnSync('node', [path.resolve(__dirname, './bundle')]);
+  ({ registerLoader } = require('../'));
+}
 
 registerLoader();
 
