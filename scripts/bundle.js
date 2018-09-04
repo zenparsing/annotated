@@ -37,7 +37,7 @@ function annotatedPlugin(options = {}) {
 
       let result = expandMacros(code, {
         location: id,
-        imports: options.imports,
+        macros: options.macros,
         sourceMap: options.sourceMap !== false,
       });
 

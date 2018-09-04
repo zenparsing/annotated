@@ -31,7 +31,7 @@ export function expandMacros(source, options = {}) {
 
   let rootPath = Path.fromParseResult(parseResult);
   let linked = linkAnnotations(rootPath, parseResult.annotations);
-  let imports = getMacroImports(linked, options.imports);
+  let imports = getMacroImports(linked, options.macros);
   let loader = new ModuleLoader(options.location);
   let registry = registerProcessors(imports, loader, macros);
 
