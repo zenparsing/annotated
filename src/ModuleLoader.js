@@ -22,11 +22,11 @@ export class ModuleLoader {
   }
 
   load(specifier) {
-    let done = startModuleTranslation();
+    startModuleTranslation();
     try {
       return this._module.require(this.resolve(specifier));
     } finally {
-      done();
+      endModuleTranslation();
     }
   }
 
@@ -35,7 +35,8 @@ export class ModuleLoader {
   }
 
   static startTranslation() {
-    return startModuleTranslation();
+    startModuleTranslation();
+    return endModuleTranslation;
   }
 
 }
@@ -44,22 +45,27 @@ let originals = null;
 
 function startModuleTranslation() {
   if (originals) {
-    return () => {};
+    originals.refCount += 1;
+    return;
   }
 
   originals = {
+    refCount: 1,
     prepareStackTrace: Error.prepareStackTrace,
     compile: Module.prototype._compile,
   };
 
   Module.prototype._compile = compileOverride;
   Error.prepareStackTrace = prepareStackTraceOverride;
+}
 
-  return () => {
+function endModuleTranslation() {
+  originals.refCount -= 1;
+  if (originals.refCount === 0) {
     Module.prototype._compile = originals.compile;
     Error.prepareStackTrace = originals.prepareStackTrace;
     originals = null;
-  };
+  }
 }
 
 function shouldTranslate(filename) {
