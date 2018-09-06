@@ -2,15 +2,15 @@ const path = require('path');
 const { rollup } = require('rollup');
 const resolve = require('rollup-plugin-node-resolve');
 const { createFilter } = require('rollup-pluginutils');
-const { spawnSync } = require('child_process');
-
-spawnSync('git', ['clean', '-dfX', './dist']);
+const { expandMacros } = require('../');
 
 rollup({
   input: path.resolve(__dirname, '../src/index.js'),
   plugins: [
     resolve(),
-    annotatedPlugin({ include: 'src/**' }),
+    annotatedPlugin({
+      include: 'src/**',
+    }),
   ],
   external: ['path', 'fs', 'module'],
 }).then(bundle => {
@@ -29,8 +29,6 @@ function annotatedPlugin(options = {}) {
   return {
     name: 'annotated',
     transform(code, id) {
-      return null;
-      /*
       if (!filter(id)) {
         return null;
       }
@@ -39,13 +37,13 @@ function annotatedPlugin(options = {}) {
         location: id,
         macros: options.macros,
         sourceMap: options.sourceMap !== false,
+        translateModules: options.translateModules,
       });
 
       return {
         code: result.output,
         map: result.sourceMap,
       };
-      */
     },
   };
 }
