@@ -10,6 +10,7 @@ rollup({
     resolve(),
     annotatedPlugin({
       include: 'src/**',
+      macros: [path.resolve(__dirname, '../src/macros/SymbolNames.js')],
     }),
   ],
   external: ['path', 'fs', 'module'],

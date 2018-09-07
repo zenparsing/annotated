@@ -1,5 +1,5 @@
 export function registerMacros({ define, AST }) {
-  define(rootPath => rootPath.visit(new class SoftPrivateVisitor {
+  define(rootPath => rootPath.visit(new class SymbolNamesVisitor {
 
     constructor() {
       this.names = new Map();
