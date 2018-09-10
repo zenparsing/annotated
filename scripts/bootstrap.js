@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const rimraf = require('rimraf');
 
-const version = '^0.3.0';
+const version = '^0.3.1';
 const dir = path.resolve(__dirname, 'bootstrap');
 const outDir = path.resolve(__dirname, '../dist');
 const outPath = path.resolve(outDir, 'annotated.js');

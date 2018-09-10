@@ -42,6 +42,7 @@ test('export default function', `
 `, `
   'use strict';
   exports.default = f;
+
   function f() {}
 `);
 
@@ -50,6 +51,7 @@ test('export default anonymous function', `
 `, `
   'use strict';
   exports.default = _default;
+
   function _default() {}
 `);
 
@@ -58,7 +60,9 @@ test('export default class', `
 `, `
   'use strict';
   exports.default = undefined;
+
   class C {}
+
   exports.default = C;
 `);
 
@@ -67,7 +71,9 @@ test('export default anonymous class', `
 `, `
   'use strict';
   exports.default = undefined;
+
   class _default {}
+
   exports.default = _default;
 `);
 
@@ -87,6 +93,7 @@ test('export function', `
 `, `
   'use strict';
   exports.f = f;
+
   function f() {}
 `);
 
@@ -95,7 +102,9 @@ test('export class', `
 `, `
   'use strict';
   exports.C = undefined;
+
   class C {}
+
   exports.C = C;
 `);
 
@@ -107,9 +116,7 @@ test('export variables', `
   exports.y = undefined;
   exports.z = undefined;
   exports.m = undefined;
-  let x = 1, y = 2, {
-    z
-  } = a, [m] = b;
+  let x = 1, y = 2, { z } = a, [m] = b;
   exports.x = x;
   exports.y = y;
   exports.z = z;
