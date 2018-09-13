@@ -3,7 +3,7 @@ import { AST } from 'esparse';
 const Node = Symbol();
 const Location = Symbol();
 const Parent = Symbol();
-const ScopeMap = Symbol();
+const ScopeInfo = Symbol();
 
 export class Path {
 
@@ -11,7 +11,7 @@ export class Path {
     this[Node] = node;
     this[Location] = location;
     this[Parent] = parent;
-    this[ScopeMap] = parent ? parent[ScopeMap] : null;
+    this[ScopeInfo] = parent ? parent[ScopeInfo] : null;
   }
 
   get node() {
@@ -100,13 +100,22 @@ export class Path {
   }
 
   uniqueIdentifier(baseName, options = {}) {
-    let scope = getBlockScope(this);
-    let ident = getUniqueIdentifier(baseName, scope);
+    let scopeInfo = this[ScopeInfo];
+    let ident = null;
 
-    scope.free.push(ident);
+    for (let i = 0; true; ++i) {
+      let value = baseName;
+      if (i > 0) value += '_' + i;
+      if (!scopeInfo.names.has(value)) {
+        ident = { type: 'Identifier', value };
+        break;
+      }
+    }
+
+    scopeInfo.names.add(ident.value);
 
     if (options.kind) {
-      let { statements } = scope.node;
+      let { statements } = getBlockScope(this, scopeInfo.map).node;
       let i = 0;
 
       while (i < statements.length) {
@@ -130,7 +139,7 @@ export class Path {
 
   static fromParseResult(result) {
     let path = new Path(result.ast);
-    path[ScopeMap] = mapScopes(result.scopeTree);
+    path[ScopeInfo] = getScopeInfo(result.scopeTree);
     return path;
   }
 
@@ -166,17 +175,27 @@ function getLocation(path, fn) {
   fn(parent, key, index);
 }
 
-function mapScopes(scope, map = new Map()) {
-  if (scope.node) {
-    map.set(scope.node, scope);
+function getScopeInfo(scopeTree) {
+  let map = new Map();
+  let names = new Set();
+
+  function visit(scope) {
+    if (scope.node) {
+      map.set(scope.node, scope);
+    }
+    scope.names.forEach((value, key) => names.add(key));
+    scope.free.forEach(ident => names.add(ident.value));
+    scope.children.forEach(visit);
   }
-  scope.children.forEach(child => mapScopes(child, map));
-  return map;
+
+  visit(scopeTree);
+
+  return { root: scopeTree, map, names };
 }
 
-function getBlockScope(path) {
+function getBlockScope(path, scopeMap) {
   while (path) {
-    let scope = path[ScopeMap].get(path.node);
+    let scope = scopeMap.get(path.node);
     if (scope) {
       while (scope.type !== 'block') scope = scope.parent;
       return scope;
@@ -184,26 +203,4 @@ function getBlockScope(path) {
     path = path.parent;
   }
   return null;
-}
-
-function isUniqueName(name, scope) {
-  for (let free of scope.free) {
-    if (free.value === name) return false;
-  }
-
-  for (let s = scope; s; s = s.parent) {
-    if (s.names.has(name)) return false;
-  }
-
-  return true;
-}
-
-function getUniqueIdentifier(name, scope) {
-  for (let i = 0; true; ++i) {
-    let value = name;
-    if (i > 0) value += '_' + i;
-    if (isUniqueName(value, scope)) {
-      return { type: 'Identifier', value };
-    }
-  }
 }
