@@ -192,7 +192,7 @@ function isUniqueName(name, scope) {
   }
 
   for (let s = scope; s; s = s.parent) {
-    if (s.names[name]) return false;
+    if (s.names.has(name)) return false;
   }
 
   return true;
