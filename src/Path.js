@@ -1,31 +1,36 @@
 import { AST } from 'esparse';
 
+const Node = Symbol();
+const Location = Symbol();
+const Parent = Symbol();
+const ScopeMap = Symbol();
+
 export class Path {
 
   constructor(node, parent = null, location = null) {
-    this._node = node;
-    this._location = location;
-    this._parent = parent;
-    this._scopeMap = parent ? parent._scopeMap : null;
+    this[Node] = node;
+    this[Location] = location;
+    this[Parent] = parent;
+    this[ScopeMap] = parent ? parent[ScopeMap] : null;
   }
 
   get node() {
-    return this._node;
+    return this[Node];
   }
 
   get parent() {
-    return this._parent;
+    return this[Parent];
   }
 
   get parentNode() {
-    return this._parent ? this._parent._node : null;
+    return this[Parent] ? this[Parent][Node] : null;
   }
 
   forEachChild(fn) {
-    if (!this._node) {
+    if (!this[Node]) {
       return;
     }
-    AST.forEachChild(this._node, (child, key, index) => {
+    AST.forEachChild(this[Node], (child, key, index) => {
       fn(new Path(child, this, { key, index }));
     });
   }
@@ -39,7 +44,7 @@ export class Path {
       throw new TypeError('Invalid node object');
     }
 
-    if (this._parent) {
+    if (this[Parent]) {
       getLocation(this, (parent, key, index) => {
         if (typeof index !== 'number') {
           parent[key] = newNode;
@@ -51,7 +56,7 @@ export class Path {
       });
     }
 
-    this._node = newNode;
+    this[Node] = newNode;
   }
 
   insertNodesAfter(...nodes) {
@@ -75,16 +80,16 @@ export class Path {
   visit(visitor) {
     // TODO: should we support preorder/postorder/both?
     this.forEachChild(childPath => childPath.visit(visitor));
-    if (!this._node) {
+    if (!this[Node]) {
       return;
     }
 
-    let method = visitor[this._node.type];
+    let method = visitor[this[Node].type];
     if (typeof method === 'function') {
       method.call(visitor, this);
     }
 
-    if (!this._node) {
+    if (!this[Node]) {
       return;
     }
 
@@ -125,20 +130,20 @@ export class Path {
 
   static fromParseResult(result) {
     let path = new Path(result.ast);
-    path._scopeMap = mapScopes(result.scopeTree);
+    path[ScopeMap] = mapScopes(result.scopeTree);
     return path;
   }
 
 }
 
 function getLocation(path, fn) {
-  if (!path._parent) {
+  if (!path[Parent]) {
     throw new Error('Node does not have a parent');
   }
 
-  let { key, index } = path._location;
-  let node = path._node;
-  let parent = path._parent._node;
+  let { key, index } = path[Location];
+  let node = path[Node];
+  let parent = path[Parent][Node];
 
   let valid = typeof index === 'number' ?
     parent[key][index] === node :
@@ -148,7 +153,7 @@ function getLocation(path, fn) {
     AST.forEachChild(parent, (child, k, i, stop) => {
       if (child === node) {
         valid = true;
-        path._location = { key: (key = k), index: (index = i) };
+        path[Location] = { key: (key = k), index: (index = i) };
         return stop;
       }
     });
@@ -171,7 +176,7 @@ function mapScopes(scope, map = new Map()) {
 
 function getBlockScope(path) {
   while (path) {
-    let scope = path._scopeMap.get(path.node);
+    let scope = path[ScopeMap].get(path.node);
     if (scope) {
       while (scope.type !== 'block') scope = scope.parent;
       return scope;

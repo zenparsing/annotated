@@ -3,7 +3,7 @@ import { ModuleLoader } from './ModuleLoader.js';
 import { MacroRegistry } from './MacroRegistry.js';
 import { Path } from './Path.js';
 import { generateSourceMap, encodeInlineSourceMap } from './SourceMap.js';
-import * as ModuleTranslator from './macros/ModuleTranslator.js';
+import * as ModuleTranslator from './ModuleTranslator.js';
 import * as Templates from './Templates.js';
 
 function basename(file) {
