@@ -4,6 +4,7 @@ test('import default', `
   import x from 'a';
 `, `
   'use strict';
+
   const _a = require('a');
   const x = typeof _a === 'function' ? _a : _a.default;
 `);
@@ -12,6 +13,7 @@ test('import names', `
   import { x, y as z } from 'a';
 `, `
   'use strict';
+
   const _a = require('a');
   const x = _a.x;
   const z = _a.y;
@@ -22,6 +24,7 @@ test('import twice', `
   import { y } from 'a';
 `, `
   'use strict';
+
   const _a = require('a');
   const x = _a.x;
   const _a_1 = require('a');
@@ -35,6 +38,7 @@ test('import no shadowing', `
   _b();
 `, `
   'use strict';
+
   const _a_1 = require('a');
   const x = _a_1.x;
   const _b_1 = require('b');

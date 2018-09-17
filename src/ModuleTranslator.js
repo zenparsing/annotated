@@ -52,7 +52,7 @@ export function registerMacros({ define, templates, AST }) {
         this.visit(node.statements[i]);
       }
 
-      let statements = [templates.statement`'use strict'`];
+      let statements = [new AST.Directive('use strict', new AST.StringLiteral('use strict'))];
 
       for (let { names, from, exporting } of this.imports) {
         if (exporting && names.length === 1) {

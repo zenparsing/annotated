@@ -4,6 +4,7 @@ test('export default from', `
   export x from 'a';
 `, `
   'use strict';
+
   exports.x = require('a').default;
 `);
 
@@ -11,6 +12,7 @@ test('export namespace', `
   export * from 'a';
 `, `
   'use strict';
+
   Object.assign(exports, require('a'));
 `);
 
@@ -18,6 +20,7 @@ test('export namespace with name', `
   export * as x from 'a';
 `, `
   'use strict';
+
   exports.x = require('a');
 `);
 
@@ -25,6 +28,7 @@ test('export one from', `
   export { x as y } from 'a';
 `, `
   'use strict';
+
   exports.y = require('a').x;
 `);
 
@@ -32,6 +36,7 @@ test('export multiple from', `
   export { x, y as z } from 'a';
 `, `
   'use strict';
+
   const _a = require('a');
   exports.x = _a.x;
   exports.z = _a.y;
@@ -41,6 +46,7 @@ test('export default function', `
   export default function f() {}
 `, `
   'use strict';
+
   exports.default = f;
 
   function f() {}
@@ -50,6 +56,7 @@ test('export default anonymous function', `
   export default function() {}
 `, `
   'use strict';
+
   exports.default = _default;
 
   function _default() {}
@@ -59,6 +66,7 @@ test('export default class', `
   export default class C {}
 `, `
   'use strict';
+
   exports.default = undefined;
 
   class C {}
@@ -70,6 +78,7 @@ test('export default anonymous class', `
   export default class {}
 `, `
   'use strict';
+
   exports.default = undefined;
 
   class _default {}
@@ -81,6 +90,7 @@ test('export default expression', `
   export default { x: 1, y: 2 };
 `, `
   'use strict';
+
   exports.default = undefined;
   exports.default = {
     x: 1,
@@ -92,6 +102,7 @@ test('export function', `
   export function f() {}
 `, `
   'use strict';
+
   exports.f = f;
 
   function f() {}
@@ -101,6 +112,7 @@ test('export class', `
   export class C {}
 `, `
   'use strict';
+
   exports.C = undefined;
 
   class C {}
@@ -112,6 +124,7 @@ test('export variables', `
   export let x = 1, y = 2, { z } = a, [m] = b;
 `, `
   'use strict';
+
   exports.x = undefined;
   exports.y = undefined;
   exports.z = undefined;
@@ -128,6 +141,7 @@ test('export locals', `
   export { x as y };
 `, `
   'use strict';
+
   exports.y = undefined;
   const x = 1;
   exports.y = x;
