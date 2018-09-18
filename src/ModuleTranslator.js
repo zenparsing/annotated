@@ -28,22 +28,6 @@ export function registerMacros({ define, templates, AST }) {
       this.replacements[this.index] = newNode;
     }
 
-    moduleIdentifier(from) {
-      let value = this.moduleNames.get(from.value);
-      if (value) {
-        return new AST.Identifier(value);
-      }
-
-      value = '_' + from.value
-        .replace(/.*[/\\](?=[^/\\]+$)/, '')
-        .replace(/\..*$/, '')
-        .replace(/[^a-zA-Z0-1_$]/g, '_');
-
-      let ident = this.rootPath.uniqueIdentifier(value);
-      this.moduleNames.set(value, ident.value);
-      return ident;
-    }
-
     Module(node) {
       this.replacements = Array.from(node.statements);
 
@@ -73,11 +57,21 @@ export function registerMacros({ define, templates, AST }) {
           continue;
         }
 
-        let ident = this.moduleIdentifier(from);
+        let name = this.moduleNames.get(from.value);
+        let ident = name ? new AST.Identifier(name) : null;
 
-        statements.push(templates.statement`
-          const ${ ident } = require(${ from })
-        `);
+        if (!ident) {
+          name = this.rootPath.uniqueIdentifier('_' + from.value
+            .replace(/.*[/\\](?=[^/\\]+$)/, '')
+            .replace(/\..*$/, '')
+            .replace(/[^a-zA-Z0-1_$]/g, '_')
+          );
+          this.moduleNames.set(from.value, name);
+          ident = new AST.Identifier(name);
+          statements.push(templates.statement`
+            const ${ ident } = require(${ from })
+          `);
+        }
 
         for (let { imported, local } of names) {
           let statement;

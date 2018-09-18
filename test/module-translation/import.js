@@ -27,8 +27,7 @@ test('import twice', `
 
   const _a = require('a');
   const x = _a.x;
-  const _a_1 = require('a');
-  const y = _a_1.y;
+  const y = _a.y;
 `);
 
 test('import no shadowing', `

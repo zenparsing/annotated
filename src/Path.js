@@ -115,7 +115,7 @@ export class Path {
     scopeInfo.names.add(ident.value);
 
     if (options.kind) {
-      let { statements } = getBlockScope(this, scopeInfo.map).node;
+      let { statements } = getBlock(this).node;
       let i = 0;
 
       while (i < statements.length) {
@@ -176,13 +176,9 @@ function getLocation(path, fn) {
 }
 
 function getScopeInfo(scopeTree) {
-  let map = new Map();
   let names = new Set();
 
   function visit(scope) {
-    if (scope.node) {
-      map.set(scope.node, scope);
-    }
     scope.names.forEach((value, key) => names.add(key));
     scope.free.forEach(ident => names.add(ident.value));
     scope.children.forEach(visit);
@@ -190,15 +186,17 @@ function getScopeInfo(scopeTree) {
 
   visit(scopeTree);
 
-  return { root: scopeTree, map, names };
+  return { names };
 }
 
-function getBlockScope(path, scopeMap) {
+function getBlock(path) {
   while (path) {
-    let scope = scopeMap.get(path.node);
-    if (scope) {
-      while (scope.type !== 'block') scope = scope.parent;
-      return scope;
+    switch (path.node.type) {
+      case 'Script':
+      case 'Module':
+      case 'Block':
+      case 'FunctionBody':
+        return path;
     }
     path = path.parent;
   }
