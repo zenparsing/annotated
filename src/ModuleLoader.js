@@ -103,10 +103,6 @@ function mapSourcePosition(mappings, line, column) {
   let right = mappings.length - 1;
   let left = 0;
 
-  if (right < 0) {
-    return { line, column };
-  }
-
   // Binary search over generated position
   while (left <= right) {
     let mid = (left + right) >> 1;
@@ -124,6 +120,10 @@ function mapSourcePosition(mappings, line, column) {
     } else {
       right = mid - 1;
     }
+  }
+
+  if (right < 0) {
+    return { line: 0, column: 0 };
   }
 
   return mappings[right].original;
