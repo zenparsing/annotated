@@ -50,10 +50,20 @@ test('import then export', `
   'use strict';
 
   let _a = require('a');
-  exports.x = undefined;
-  exports.y = undefined;
   exports.x = _a.x;
   exports.y = _a.x;
+`);
+
+test('exports hoisted to top', `
+  import { x } from 'a';
+  export function f() {}
+`, `
+  'use strict';
+
+  exports.f = f;
+  let _a = require('a');
+
+  function f() {}
 `);
 
 test('export default function', `
@@ -81,8 +91,6 @@ test('export default class', `
 `, `
   'use strict';
 
-  exports.default = undefined;
-
   class C {}
 
   exports.default = C;
@@ -92,8 +100,6 @@ test('export default anonymous class', `
   export default class {}
 `, `
   'use strict';
-
-  exports.default = undefined;
 
   class _default {}
 
@@ -105,7 +111,6 @@ test('export default expression', `
 `, `
   'use strict';
 
-  exports.default = undefined;
   exports.default = {
     x: 1,
     y: 2
@@ -127,8 +132,6 @@ test('export class', `
 `, `
   'use strict';
 
-  exports.C = undefined;
-
   class C {}
 
   exports.C = C;
@@ -139,10 +142,6 @@ test('export variables', `
 `, `
   'use strict';
 
-  exports.x = undefined;
-  exports.y = undefined;
-  exports.z = undefined;
-  exports.m = undefined;
   let x = 1, y = 2, { z } = a, [m] = b;
   exports.x = x;
   exports.y = y;
@@ -156,7 +155,6 @@ test('export locals', `
 `, `
   'use strict';
 
-  exports.y = undefined;
   const x = 1;
   exports.y = x;
 `);

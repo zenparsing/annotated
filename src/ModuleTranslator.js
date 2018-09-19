@@ -43,6 +43,14 @@ export function registerMacros({ define, templates, AST }) {
 
       let statements = [new AST.Directive('use strict', new AST.StringLiteral('use strict'))];
 
+      for (let { local, exported, hoist } of this.exports) {
+        if (hoist) {
+          statements.push(templates.statement`
+            exports.${ new AST.Identifier(exported.value) } = ${ local }
+          `);
+        }
+      }
+
       for (let { names, from, exporting } of this.imports) {
         if (exporting && names.length === 1) {
           let { imported, local } = names[0];
@@ -118,13 +126,6 @@ export function registerMacros({ define, templates, AST }) {
             statements.push(statement);
           }
         }
-      }
-
-      for (let { local, exported, hoist } of this.exports) {
-        let value = hoist ? local : new AST.Identifier('undefined');
-        statements.push(templates.statement`
-          exports.${ new AST.Identifier(exported.value) } = ${ value }
-        `);
       }
 
       for (let node of this.replacements) {
