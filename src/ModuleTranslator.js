@@ -1,3 +1,5 @@
+import { resolveScopes } from 'esparse';
+
 export function registerMacros({ define, templates, AST }) {
   define(rootPath => new ImportExportProcessor().execute(rootPath));
 
@@ -29,6 +31,9 @@ export function registerMacros({ define, templates, AST }) {
     }
 
     Module(node) {
+      let moduleScope = resolveScopes(node).children[0];
+      let replaceMap = new Map();
+
       this.replacements = Array.from(node.statements);
 
       for (let i = 0; i < node.statements.length; ++i) {
@@ -69,12 +74,12 @@ export function registerMacros({ define, templates, AST }) {
           this.moduleNames.set(from.value, name);
           ident = new AST.Identifier(name);
           statements.push(templates.statement`
-            const ${ ident } = require(${ from })
+            let ${ ident } = require(${ from })
           `);
         }
 
         for (let { imported, local } of names) {
-          let statement;
+          let statement = null;
 
           if (exporting) {
             if (imported) {
@@ -94,14 +99,13 @@ export function registerMacros({ define, templates, AST }) {
             if (imported) {
               if (imported.value === 'default') {
                 statement = templates.statement`
-                  const ${ local } = typeof ${ ident } === 'function' ?
-                    ${ ident } :
-                    ${ ident }.default
+                  if (typeof ${ ident } === 'function') {
+                    ${ ident } = { default: ${ ident } };
+                  }
                 `;
-              } else {
-                statement = templates.statement`
-                  const ${ local } = ${ ident }.${ imported }
-                `;
+              }
+              for (let ref of moduleScope.names.get(local.value).references) {
+                replaceMap.set(ref, new AST.MemberExpression(ident, imported));
               }
             } else {
               statement = templates.statement`
@@ -110,14 +114,16 @@ export function registerMacros({ define, templates, AST }) {
             }
           }
 
-          statements.push(statement);
+          if (statement) {
+            statements.push(statement);
+          }
         }
       }
 
       for (let { local, exported, hoist } of this.exports) {
         let value = hoist ? local : new AST.Identifier('undefined');
         statements.push(templates.statement`
-          exports.${ exported } = ${ value }
+          exports.${ new AST.Identifier(exported.value) } = ${ value }
         `);
       }
 
@@ -130,6 +136,39 @@ export function registerMacros({ define, templates, AST }) {
       }
 
       node.statements = statements;
+
+      this.rootPath.visit({
+        Identifier(path) {
+          let expr = replaceMap.get(path.node);
+          if (!expr) {
+            return;
+          }
+
+          let { parentNode } = path;
+
+          switch (parentNode.type) {
+            case 'PatternProperty':
+              if (parentNode.name === path.node && !parentNode.pattern) {
+                parentNode.pattern = expr;
+              }
+              break;
+            case 'PropertyDefinition':
+              if (!parentNode.expression) {
+                parentNode.expression = expr;
+              }
+              break;
+            default:
+              path.replaceNode(expr);
+              break;
+          }
+        },
+
+        ImportCall(path) {
+          path.replaceNode(templates.expression`
+            Promise.resolve(require(${ path.node.argument }))
+          `);
+        },
+      });
     }
 
     ImportDeclaration(node) {
@@ -243,7 +282,7 @@ export function registerMacros({ define, templates, AST }) {
         for (let child of node.specifiers) {
           let name = {
             local: child.local,
-            exported: child.exported ? child.exported : child.local,
+            exported: new AST.Identifier(child.exported ? child.exported.value : child.local.value),
             hoist: false,
           };
 

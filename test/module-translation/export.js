@@ -37,9 +37,23 @@ test('export multiple from', `
 `, `
   'use strict';
 
-  const _a = require('a');
+  let _a = require('a');
   exports.x = _a.x;
   exports.z = _a.y;
+`);
+
+test('import then export', `
+  import { x } from 'a';
+  export { x };
+  export { x as y };
+`, `
+  'use strict';
+
+  let _a = require('a');
+  exports.x = undefined;
+  exports.y = undefined;
+  exports.x = _a.x;
+  exports.y = _a.x;
 `);
 
 test('export default function', `

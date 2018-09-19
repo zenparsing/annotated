@@ -1,4 +1,4 @@
-import { AST } from 'esparse';
+import { AST, resolveScopes } from 'esparse';
 
 const Node = Symbol();
 const Location = Symbol();
@@ -78,7 +78,6 @@ export class Path {
   }
 
   visit(visitor) {
-    // TODO: should we support preorder/postorder/both?
     this.forEachChild(childPath => childPath.visit(visitor));
     if (!this[Node]) {
       return;
@@ -139,7 +138,7 @@ export class Path {
 
   static fromParseResult(result) {
     let path = new Path(result.ast);
-    path[ScopeInfo] = getScopeInfo(result.scopeTree);
+    path[ScopeInfo] = getScopeInfo(result);
     return path;
   }
 
@@ -175,7 +174,8 @@ function getLocation(path, fn) {
   fn(parent, key, index);
 }
 
-function getScopeInfo(scopeTree) {
+function getScopeInfo(parseResult) {
+  let scopeTree = resolveScopes(parseResult.ast, { lineMap: parseResult.lineMap });
   let names = new Set();
 
   function visit(scope) {
