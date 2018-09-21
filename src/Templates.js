@@ -1,4 +1,4 @@
-import { parse } from 'esparse';
+import { AST, parse } from 'esparse';
 import { Path } from './Path.js';
 
 const PLACEHOLDER = '$$MACRO$$';
@@ -39,14 +39,14 @@ export function moduleTemplate(literals, ...values) {
 
     Node(path) {
       // Remove source offset data
-      path.node.start = undefined;
-      path.node.end = undefined;
+      path.node.start = -1;
+      path.node.end = -1;
     },
 
     Identifier(path) {
       if (path.node.value === PLACEHOLDER) {
         let value = values[index++];
-        path.replaceNode(value);
+        path.replaceNode(typeof value === 'string' ? new AST.Identifier(value) : value);
       }
     },
 

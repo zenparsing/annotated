@@ -3,10 +3,6 @@ import { resolveScopes } from 'esparse';
 export function registerMacros({ define, templates, AST }) {
   define(rootPath => new ImportExportProcessor().execute(rootPath));
 
-  function id(ident) {
-    return new AST.Identifier(typeof ident === 'string' ? ident : ident.value);
-  }
-
   class ImportExportProcessor {
 
     constructor() {
@@ -50,7 +46,7 @@ export function registerMacros({ define, templates, AST }) {
       for (let { local, exported, hoist } of this.exports) {
         if (hoist) {
           statements.push(templates.statement`
-            exports.${ id(exported) } = ${ id(local) }
+            exports.${ exported } = ${ local }
           `);
         }
       }
@@ -60,11 +56,11 @@ export function registerMacros({ define, templates, AST }) {
           let { imported, local } = names[0];
           if (imported) {
             statements.push(templates.statement`
-              exports.${ id(local) } = require(${ from }).${ id(imported) }
+              exports.${ local } = require(${ from }).${ imported }
             `);
           } else if (local) {
             statements.push(templates.statement`
-              exports.${ id(local) } = require(${ from })
+              exports.${ local } = require(${ from })
             `);
           } else {
             statements.push(templates.statement`
@@ -85,7 +81,7 @@ export function registerMacros({ define, templates, AST }) {
           this.moduleNames.set(from.value, moduleName);
 
           statements.push(templates.statement`
-            let ${ id(moduleName) } = require(${ from })
+            let ${ moduleName } = require(${ from })
           `);
         }
 
@@ -96,15 +92,15 @@ export function registerMacros({ define, templates, AST }) {
 
             if (imported) {
               statement = templates.statement`
-                exports.${ id(local) } = ${ id(moduleName) }.${ id(imported) }
+                exports.${ local } = ${ moduleName }.${ imported }
               `;
             } else if (local) {
               statement = templates.statement`
-                exports.${ id(local) } = ${ id(moduleName) }
+                exports.${ local } = ${ moduleName }
               `;
             } else {
               statement = templates.statement`
-                Object.assign(exports, ${ id(moduleName) })
+                Object.assign(exports, ${ moduleName })
               `;
             }
 
@@ -113,19 +109,22 @@ export function registerMacros({ define, templates, AST }) {
             if (imported) {
               if (imported === 'default') {
                 statement = templates.statement`
-                  if (typeof ${ id(moduleName) } === 'function') {
-                    ${ id(moduleName) } = { default: ${ id(moduleName) } };
+                  if (typeof ${ moduleName } === 'function') {
+                    ${ moduleName } = { default: ${ moduleName } };
                   }
                 `;
               }
 
               for (let ref of moduleScope.names.get(local).references) {
-                replaceMap.set(ref, new AST.MemberExpression(id(moduleName), id(imported)));
+                replaceMap.set(ref, new AST.MemberExpression(
+                  new AST.Identifier(moduleName),
+                  new AST.Identifier(imported)
+                ));
               }
 
             } else {
               statement = templates.statement`
-                const ${ id(local) } = ${ id(moduleName) }
+                const ${ local } = ${ moduleName }
               `;
             }
 
@@ -255,7 +254,7 @@ export function registerMacros({ define, templates, AST }) {
             hoist: false,
           });
           statements.push(templates.statement`
-            exports.${ id(ident) } = ${ id(ident) }
+            exports.${ ident.value } = ${ ident.value }
           `);
         }
 
@@ -277,7 +276,7 @@ export function registerMacros({ define, templates, AST }) {
           this.replaceWith([
             declaration,
             templates.statement`
-              exports.${ id(ident) } = ${ id(ident) }
+              exports.${ ident.value } = ${ ident.value }
             `,
           ]);
         }
@@ -318,7 +317,7 @@ export function registerMacros({ define, templates, AST }) {
           this.exports.push(name);
 
           statements.push(templates.statement`
-            exports.${ id(name.exported) } = ${ child.local }
+            exports.${ name.exported } = ${ child.local }
           `);
         }
 
@@ -347,7 +346,7 @@ export function registerMacros({ define, templates, AST }) {
           this.replaceWith([
             binding,
             templates.statement`
-              exports.default = ${ id(binding.identifier) }
+              exports.default = ${ binding.identifier.value }
             `,
           ]);
         }
