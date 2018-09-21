@@ -1,6 +1,6 @@
 {
   "name": "annotated",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "bin": {
     "annotated": "./bin/annotated.js"
   },
