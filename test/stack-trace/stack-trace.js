@@ -23,7 +23,7 @@ try {
   x();
 } catch (err) {
   assert.deepEqual(getStackLines(err), [
-    '    at Object.x (/original.js:1:22)',
+    '    at x (/original.js:1:22)',
     '    at (/stack-trace.js:23:3)',
   ]);
 }
