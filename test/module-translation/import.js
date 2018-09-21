@@ -75,3 +75,13 @@ test('import call', `
 
   Promise.resolve(require('foo')).then(x);
 `);
+
+test('import and call', `
+  import { x } from 'a';
+  x();
+`, `
+  'use strict';
+
+  let _a = require('a');
+  (0, _a.x)();
+`);

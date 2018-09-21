@@ -166,6 +166,11 @@ export function registerMacros({ define, templates, AST }) {
                 parentNode.expression = expr;
               }
               break;
+            case 'CallExpression':
+              path.replaceNode(templates.expression`
+                (0, ${ expr })
+              `);
+              break;
             default:
               path.replaceNode(expr);
               break;
