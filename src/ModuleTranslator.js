@@ -335,7 +335,7 @@ export function registerMacros({ define, templates, AST }) {
 
       if (binding.type === 'FunctionDeclaration' || binding.type === 'ClassDeclaration') {
         if (!binding.identifier) {
-          binding.identifier = this.rootPath.uniqueIdentifier('_default');
+          binding.identifier = new AST.Identifier(this.rootPath.uniqueIdentifier('_default'));
         }
 
         let exportName = {

@@ -22,14 +22,14 @@ export function registerMacros(api) {
 
       // Add an identifier for default class exports
       if (!classNode.identifier) {
-        classNode.identifier = path.uniqueIdentifier('_class');
+        classNode.identifier = new AST.Identifier(path.uniqueIdentifier('_class'));
       }
 
       // Insert a define statement after class definition
       path.insertNodesAfter(api.templates.statement`
         window.customElements.define(
           ${ specifier },
-          ${ classNode.identifier },
+          ${ classNode.identifier.value },
           ${ options }
         )
       `);
@@ -37,7 +37,7 @@ export function registerMacros(api) {
     } else {
 
       // Create an identifier for the class expression
-      let  ident = path.uniqueIdentifier('_class', { kind: 'let' });
+      let name = path.uniqueIdentifier('_class', { kind: 'let' });
 
       // TODO: Is "path" always right here? It couldn't be an export
       // declaration?

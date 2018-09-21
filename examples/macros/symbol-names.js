@@ -23,9 +23,9 @@ export function registerMacros({ define, AST }) {
         ),
       });
 
-      this.names.set(name, ident.value);
+      this.names.set(name, ident);
 
-      return ident;
+      return new AST.Identifier(ident);
     }
 
     MemberExpression({ node }) {

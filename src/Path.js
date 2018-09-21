@@ -106,12 +106,12 @@ export class Path {
       let value = baseName;
       if (i > 0) value += '_' + i;
       if (!scopeInfo.names.has(value)) {
-        ident = { type: 'Identifier', value };
+        ident = value;
         break;
       }
     }
 
-    scopeInfo.names.add(ident.value);
+    scopeInfo.names.add(ident);
 
     if (options.kind) {
       let { statements } = getBlock(this).node;
@@ -127,7 +127,7 @@ export class Path {
         kind: options.kind,
         declarations: [{
           type: 'VariableDeclarator',
-          pattern: { type: 'Identifier', value: ident.value },
+          pattern: { type: 'Identifier', value: ident },
           initializer: options.initializer || null,
         }],
       });

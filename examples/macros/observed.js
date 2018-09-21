@@ -8,13 +8,13 @@ export function registerMacros({ define, templates, AST }) {
     let symbolName = '$' + name.value.replace(/^_/, '');
 
     path.node.name = new AST.ComputedPropertyName(
-      path.uniqueIdentifier(symbolName, {
+      new AST.Identifier(path.uniqueIdentifier(symbolName, {
         kind: 'const',
         initializer: new AST.CallExpression(
           new AST.Identifier('Symbol'),
           [new AST.StringLiteral(symbolName)]
         ),
-      })
+      }))
     );
 
     path.insertNodesAfter(
