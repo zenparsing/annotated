@@ -3,6 +3,10 @@ import { resolveScopes } from 'esparse';
 export function registerMacros({ define, templates, AST }) {
   define(rootPath => new ImportExportProcessor().execute(rootPath));
 
+  function id(ident) {
+    return new AST.Identifier(typeof ident === 'string' ? ident : ident.value);
+  }
+
   class ImportExportProcessor {
 
     constructor() {
@@ -46,7 +50,7 @@ export function registerMacros({ define, templates, AST }) {
       for (let { local, exported, hoist } of this.exports) {
         if (hoist) {
           statements.push(templates.statement`
-            exports.${ new AST.Identifier(exported.value) } = ${ local }
+            exports.${ id(exported) } = ${ id(local) }
           `);
         }
       }
@@ -56,11 +60,11 @@ export function registerMacros({ define, templates, AST }) {
           let { imported, local } = names[0];
           if (imported) {
             statements.push(templates.statement`
-              exports.${ local } = require(${ from }).${ imported }
+              exports.${ id(local) } = require(${ from }).${ id(imported) }
             `);
           } else if (local) {
             statements.push(templates.statement`
-              exports.${ local } = require(${ from })
+              exports.${ id(local) } = require(${ from })
             `);
           } else {
             statements.push(templates.statement`
@@ -70,19 +74,18 @@ export function registerMacros({ define, templates, AST }) {
           continue;
         }
 
-        let name = this.moduleNames.get(from.value);
-        let ident = name ? new AST.Identifier(name) : null;
-
-        if (!ident) {
-          name = this.rootPath.uniqueIdentifier('_' + from.value
+        let moduleName = this.moduleNames.get(from.value);
+        if (!moduleName) {
+          moduleName = this.rootPath.uniqueIdentifier('_' + from.value
             .replace(/.*[/\\](?=[^/\\]+$)/, '')
             .replace(/\..*$/, '')
             .replace(/[^a-zA-Z0-1_$]/g, '_')
           );
-          this.moduleNames.set(from.value, name);
-          ident = new AST.Identifier(name);
+
+          this.moduleNames.set(from.value, moduleName);
+
           statements.push(templates.statement`
-            let ${ ident } = require(${ from })
+            let ${ id(moduleName) } = require(${ from })
           `);
         }
 
@@ -90,36 +93,42 @@ export function registerMacros({ define, templates, AST }) {
           let statement = null;
 
           if (exporting) {
+
             if (imported) {
               statement = templates.statement`
-                exports.${ local } = ${ ident }.${ imported }
+                exports.${ id(local) } = ${ id(moduleName) }.${ id(imported) }
               `;
             } else if (local) {
               statement = templates.statement`
-                exports.${ local } = ${ ident }
+                exports.${ id(local) } = ${ id(moduleName) }
               `;
             } else {
               statement = templates.statement`
-                Object.assign(exports, ${ ident })
+                Object.assign(exports, ${ id(moduleName) })
               `;
             }
+
           } else {
+
             if (imported) {
-              if (imported.value === 'default') {
+              if (imported === 'default') {
                 statement = templates.statement`
-                  if (typeof ${ ident } === 'function') {
-                    ${ ident } = { default: ${ ident } };
+                  if (typeof ${ id(moduleName) } === 'function') {
+                    ${ id(moduleName) } = { default: ${ id(moduleName) } };
                   }
                 `;
               }
-              for (let ref of moduleScope.names.get(local.value).references) {
-                replaceMap.set(ref, new AST.MemberExpression(ident, imported));
+
+              for (let ref of moduleScope.names.get(local).references) {
+                replaceMap.set(ref, new AST.MemberExpression(id(moduleName), id(imported)));
               }
+
             } else {
               statement = templates.statement`
-                const ${ local } = ${ ident }
+                const ${ id(local) } = ${ id(moduleName) }
               `;
             }
+
           }
 
           if (statement) {
@@ -190,15 +199,15 @@ export function registerMacros({ define, templates, AST }) {
 
     ImportSpecifier(node) {
       this.topImport.names.push({
-        imported: node.imported,
-        local: node.local ? node.local : node.imported,
+        imported: node.imported.value,
+        local: node.local ? node.local.value : node.imported.value,
       });
     }
 
     DefaultImport(node) {
       this.topImport.names.push({
-        imported: new AST.Identifier('default'),
-        local: node.identifier,
+        imported: 'default',
+        local: node.identifier.value,
       });
       this.visit(node.imports);
     }
@@ -206,7 +215,7 @@ export function registerMacros({ define, templates, AST }) {
     NamespaceImport(node) {
       this.topImport.names.push({
         imported: null,
-        local: node.identifier,
+        local: node.identifier.value,
       });
     }
 
@@ -232,67 +241,87 @@ export function registerMacros({ define, templates, AST }) {
 
     ExportDeclaration(node) {
       let { declaration } = node;
+
       if (declaration.type === 'VariableDeclaration') {
         let statements = [declaration];
         let bindings = [];
+
         this.getPatternDeclarations(declaration, bindings);
+
         for (let ident of bindings) {
           this.exports.push({
-            local: ident,
-            exported: ident,
+            local: ident.value,
+            exported: ident.value,
             hoist: false,
           });
           statements.push(templates.statement`
-            exports.${ ident } = ${ ident }
+            exports.${ id(ident) } = ${ id(ident) }
           `);
         }
+
         this.replaceWith(statements);
+
       } else {
+
         let ident = declaration.identifier;
         let exportName = {
-          local: ident,
-          exported: ident,
+          local: ident.value,
+          exported: ident.value,
           hoist: false,
         };
+
         if (declaration.type === 'FunctionDeclaration') {
           exportName.hoist = true;
           this.replaceWith(declaration);
         } else {
           this.replaceWith([
             declaration,
-            templates.statement`exports.${ ident } = ${ ident }`,
+            templates.statement`
+              exports.${ id(ident) } = ${ id(ident) }
+            `,
           ]);
         }
+
         this.exports.push(exportName);
       }
     }
 
     ExportNameList(node) {
       if (node.from) {
-        let reexport = { names: [], from: node.from, exporting: true };
+        let reexport = {
+          names: [],
+          from: node.from,
+          exporting: true,
+        };
+
         for (let child of node.specifiers) {
           reexport.names.push({
-            imported: child.local,
-            local: child.exported ? child.exported : child.local,
+            imported: child.local.value,
+            local: child.exported ? child.exported.value : child.local.value,
           });
         }
+
         this.imports.push(reexport);
         this.replaceWith(null);
+
       } else {
+
         let statements = [];
+
         for (let child of node.specifiers) {
           let name = {
-            local: child.local,
-            exported: new AST.Identifier(child.exported ? child.exported.value : child.local.value),
+            local: child.local.value,
+            exported: child.exported ? child.exported.value : child.local.value,
             hoist: false,
           };
 
           this.exports.push(name);
 
           statements.push(templates.statement`
-            exports.${ name.exported } = ${ name.local }
+            exports.${ id(name.exported) } = ${ child.local }
           `);
         }
+
         this.replaceWith(statements);
       }
     }
@@ -306,8 +335,8 @@ export function registerMacros({ define, templates, AST }) {
         }
 
         let exportName = {
-          local: binding.identifier,
-          exported: new AST.Identifier('default'),
+          local: binding.identifier.value,
+          exported: 'default',
           hoist: false,
         };
 
@@ -317,7 +346,9 @@ export function registerMacros({ define, templates, AST }) {
         } else {
           this.replaceWith([
             binding,
-            templates.statement`exports.default = ${ binding.identifier }`,
+            templates.statement`
+              exports.default = ${ id(binding.identifier) }
+            `,
           ]);
         }
 
@@ -327,7 +358,7 @@ export function registerMacros({ define, templates, AST }) {
 
         this.exports.push({
           local: null,
-          exported: new AST.Identifier('default'),
+          exported: 'default',
           hoist: false,
         });
 
@@ -342,7 +373,7 @@ export function registerMacros({ define, templates, AST }) {
       this.imports.push({
         names: [{
           imported: null,
-          local: node.identifier,
+          local: node.identifier ? node.identifier.value : null,
         }],
         from: node.from,
         exporting: true,
@@ -353,8 +384,8 @@ export function registerMacros({ define, templates, AST }) {
     ExportDefaultFrom(node) {
       this.imports.push({
         names: [{
-          imported: new AST.Identifier('default'),
-          local: node.identifier,
+          imported: 'default',
+          local: node.identifier.value,
         }],
         from: node.from,
         exporting: true,
