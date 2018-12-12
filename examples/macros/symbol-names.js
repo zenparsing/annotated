@@ -28,7 +28,9 @@ export function registerMacros({ define, AST }) {
       return new AST.Identifier(ident);
     }
 
-    MemberExpression({ node }) {
+    MemberExpression(path) {
+      path.visitChildren(this);
+      let { node } = path;
       let { property } = node;
       if (property.type === 'Identifier') {
         let name = this.getSymbolIdentifier(property.value);
@@ -38,7 +40,9 @@ export function registerMacros({ define, AST }) {
       }
     }
 
-    ComputedPropertyName({ node }) {
+    ComputedPropertyName(path) {
+      path.visitChildren(this);
+      let { node } = path;
       if (node.expression.type === 'StringLiteral') {
         let name = this.getSymbolIdentifier(node.expression.value);
         if (name) {
@@ -47,7 +51,9 @@ export function registerMacros({ define, AST }) {
       }
     }
 
-    BinaryExpression({ node }) {
+    BinaryExpression(path) {
+      path.visitChildren(this);
+      let { node } = path;
       if (node.operator === 'in' && node.left.type === 'StringLiteral') {
         let name = this.getSymbolIdentifier(node.left.value);
         if (name) {
@@ -56,7 +62,9 @@ export function registerMacros({ define, AST }) {
       }
     }
 
-    PropertyDefinition({ node }) {
+    PropertyDefinition(path) {
+      path.visitChildren(this);
+      let { node } = path;
       if (node.name.type === 'Identifier') {
         let name = this.getSymbolIdentifier(node.name.value);
         if (name) {

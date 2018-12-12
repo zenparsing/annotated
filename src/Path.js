@@ -4,6 +4,7 @@ const Node = Symbol();
 const Location = Symbol();
 const Parent = Symbol();
 const ScopeInfo = Symbol();
+const ChangeList = Symbol();
 
 export class Path {
 
@@ -12,6 +13,7 @@ export class Path {
     this[Location] = location;
     this[Parent] = parent;
     this[ScopeInfo] = parent ? parent[ScopeInfo] : null;
+    this[ChangeList] = [];
   }
 
   get node() {
@@ -30,55 +32,54 @@ export class Path {
     if (!this[Node]) {
       return;
     }
+
+    let paths = [];
+
     AST.forEachChild(this[Node], (child, key, index) => {
-      fn(new Path(child, this, { key, index }));
+      let path = new Path(child, this, { key, index });
+      paths.push(path);
+      fn(path);
     });
+
+    for (let path of paths) {
+      path.applyChanges();
+    }
+  }
+
+  applyChanges() {
+    let list = this[ChangeList];
+    this[ChangeList] = [];
+
+    for (let record of list) {
+      if (!this[Node]) {
+        break;
+      }
+      record.apply();
+    }
   }
 
   removeNode() {
-    this.replaceNode(null);
+    this[ChangeList].push(new ChangeRecord(this, 'replaceNode', [null]));
   }
 
   replaceNode(newNode) {
-    if (typeof newNode !== 'object') {
-      throw new TypeError('Invalid node object');
-    }
-
-    if (this[Parent]) {
-      getLocation(this, (parent, key, index) => {
-        if (typeof index !== 'number') {
-          parent[key] = newNode;
-        } else if (newNode) {
-          parent[key].splice(index, 1, newNode);
-        } else {
-          parent[key].splice(index, 1);
-        }
-      });
-    }
-
-    this[Node] = newNode;
-  }
-
-  insertNodesAfter(...nodes) {
-    getLocation(this, (parent, key, index) => {
-      if (typeof index !== 'number') {
-        throw new Error('Node is not contained within a node list');
-      }
-      parent[key].splice(index + 1, 0, ...nodes);
-    });
+    this[ChangeList].push(new ChangeRecord(this, 'replaceNode', [newNode]));
   }
 
   insertNodesBefore(...nodes) {
-    getLocation(this, (parent, key, index) => {
-      if (typeof index !== 'number') {
-        throw new Error('Node is not contained within a node list');
-      }
-      parent[key].splice(index, 0, ...nodes);
-    });
+    this[ChangeList].push(new ChangeRecord(this, 'insertNodesBefore', nodes));
+  }
+
+  insertNodesAfter(...nodes) {
+    this[ChangeList].push(new ChangeRecord(this, 'insertNodesAfter', nodes));
+  }
+
+  visitChildren(visitor) {
+    this.forEachChild(childPath => childPath.visit(visitor));
   }
 
   visit(visitor) {
-    this.forEachChild(childPath => childPath.visit(visitor));
+    // TODO: applyChanges will not be run if called from top-level. Is this a problem?
     if (!this[Node]) {
       return;
     }
@@ -92,9 +93,13 @@ export class Path {
       return;
     }
 
-    method = visitor.Node;
-    if (typeof method === 'function') {
-      method.call(visitor, this);
+    let { after } = visitor;
+    if (typeof after === 'function') {
+      after.call(visitor, this);
+    }
+
+    if (!method) {
+      this.visitChildren(visitor);
     }
   }
 
@@ -114,23 +119,7 @@ export class Path {
     scopeInfo.names.add(ident);
 
     if (options.kind) {
-      let { statements } = getBlock(this).node;
-      let i = 0;
-
-      while (i < statements.length) {
-        if (statements[i].type !== 'VariableDeclaration') break;
-        i += 1;
-      }
-
-      statements.splice(i, 0, {
-        type: 'VariableDeclaration',
-        kind: options.kind,
-        declarations: [{
-          type: 'VariableDeclarator',
-          pattern: { type: 'Identifier', value: ident },
-          initializer: options.initializer || null,
-        }],
-      });
+      this[ChangeList].push(new ChangeRecord(this, 'insertDeclaration', [ident, options]));
     }
 
     return ident;
@@ -140,6 +129,80 @@ export class Path {
     let path = new Path(result.ast);
     path[ScopeInfo] = getScopeInfo(result);
     return path;
+  }
+
+}
+
+class ChangeRecord {
+
+  constructor(path, name, args) {
+    this.path = path;
+    this.name = name;
+    this.args = args;
+  }
+
+  apply() {
+    switch (this.name) {
+      case 'replaceNode': return this.replaceNode(this.args[0]);
+      case 'insertNodesAfter': return this.insertNodesAfter(this.args);
+      case 'insertNodesBefore': return this.insertNodesBefore(this.args);
+      case 'insertDeclaration': return this.insertDeclaration(...this.args);
+      default: throw new Error('Invalid change record type');
+    }
+  }
+
+  replaceNode(newNode) {
+    if (this.path[Parent]) {
+      getLocation(this.path, (parent, key, index) => {
+        if (typeof index !== 'number') {
+          parent[key] = newNode;
+        } else if (newNode) {
+          parent[key].splice(index, 1, newNode);
+        } else {
+          parent[key].splice(index, 1);
+        }
+      });
+    }
+
+    this.path[Node] = newNode;
+  }
+
+  insertNodesAfter(nodes) {
+    getLocation(this.path, (parent, key, index) => {
+      if (typeof index !== 'number') {
+        throw new Error('Node is not contained within a node list');
+      }
+      parent[key].splice(index + 1, 0, ...nodes);
+    });
+  }
+
+  insertNodesBefore(nodes) {
+    getLocation(this.path, (parent, key, index) => {
+      if (typeof index !== 'number') {
+        throw new Error('Node is not contained within a node list');
+      }
+      parent[key].splice(index, 0, ...nodes);
+    });
+  }
+
+  insertDeclaration(ident, options) {
+    let { statements } = getBlock(this.path).node;
+    let i = 0;
+
+    while (i < statements.length) {
+      if (statements[i].type !== 'VariableDeclaration') break;
+      i += 1;
+    }
+
+    statements.splice(i, 0, {
+      type: 'VariableDeclaration',
+      kind: options.kind,
+      declarations: [{
+        type: 'VariableDeclarator',
+        pattern: { type: 'Identifier', value: ident },
+        initializer: options.initializer || null,
+      }],
+    });
   }
 
 }

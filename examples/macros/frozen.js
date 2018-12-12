@@ -1,30 +1,36 @@
 export function registerMacros({ define, templates, AST }) {
-  define('constClass', path => {
+  define('frozen', path => {
     let { node } = path;
 
-    let classNode =
+    let targetNode =
       node.type === 'ExportDefault' ? node.binding :
       node.type === 'ExportDeclaration' ? node.declaration :
       node;
 
-    switch (classNode.type) {
+    switch (targetNode.type) {
       case 'ClassExpression':
       case 'ClassDeclaration':
+      case 'ObjectLiteral':
         break;
       default:
-        throw new SyntaxError('@constClass can only be applied to classes');
+        throw new SyntaxError('@frozen can only be applied to classes and object literals');
+    }
+
+    if (targetNode.type === 'ObjectLiteral') {
+      path.replaceNode(template.expression`Object.freeze(${ targetNode })`);
+      return;
     }
 
     let className;
 
-    if (classNode.type === 'ClassDeclaration') {
+    if (targetNode.type === 'ClassDeclaration') {
 
       // Add an identifier for default class exports
-      if (!classNode.identifier) {
-        classNode.identifier = new AST.Identifier(path.uniqueIdentifier('_class'));
+      if (!targetNode.identifier) {
+        targetNode.identifier = new AST.Identifier(path.uniqueIdentifier('_class'));
       }
 
-      className = classNode.identifier.value;
+      className = targetNode.identifier.value;
 
       path.insertNodesAfter(...templates.statementList`
         Object.freeze(${ className });
@@ -38,7 +44,7 @@ export function registerMacros({ define, templates, AST }) {
 
       path.replaceNode(template.expression`
         (
-          ${ className } = ${ classNode },
+          ${ className } = ${ targetNode },
           Object.freeze(${ className }),
           Object.freeze(${ className }.prototype),
           ${ className }
@@ -50,7 +56,7 @@ export function registerMacros({ define, templates, AST }) {
     let ctor = null;
 
     // Find the class constructor
-    for (let elem of classNode.body.elements) {
+    for (let elem of targetNode.body.elements) {
       if (elem.type === 'MethodDefinition' && elem.kind === 'constructor') {
         ctor = elem;
         break;
@@ -59,12 +65,12 @@ export function registerMacros({ define, templates, AST }) {
 
     // Create a constructor if necessary
     if (!ctor) {
-      let decl = classNode.base ?
+      let decl = targetNode.base ?
         templates.statement`class C extends B { constructor(...args) { super(...args); } }` :
         templates.statement`class C { constructor() {} }`;
 
       ctor = decl.body.elements[0];
-      classNode.body.elements.push(ctor);
+      targetNode.body.elements.push(ctor);
     }
 
     // Freeze instance if it is at the bottom of the constructor chain

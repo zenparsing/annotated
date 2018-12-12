@@ -37,7 +37,7 @@ export function moduleTemplate(literals, ...values) {
 
   path.visit({
 
-    Node(path) {
+    after(path) {
       // Remove source offset data
       path.node.start = -1;
       path.node.end = -1;

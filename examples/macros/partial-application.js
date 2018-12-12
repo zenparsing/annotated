@@ -2,6 +2,8 @@ export function registerMacros({ define, templates, AST }) {
   define(rootPath => rootPath.visit(new class PartialApplicationVisitor {
 
     CallExpression(path) {
+      path.visitChildren(this);
+
       let { node } = path;
       let args = node.arguments;
       let hasPlaceholder = false;

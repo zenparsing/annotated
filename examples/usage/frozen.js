@@ -1,17 +1,14 @@
-@macro import '../macros/const-class.js';
+@macro import '../macros/frozen.js';
 
-@constClass
-class C {}
+@frozen class C {}
 
-@constClass
-class D {
+@frozen class D {
   constructor() {
     this.x = 1;
   }
 }
 
-@constClass
-class E extends D {
+@frozen class E extends D {
   constructor() {
     super();
     this.y = 2;

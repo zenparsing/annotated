@@ -150,6 +150,7 @@ function runProcessors(list, registry, rootPath) {
       let name = annotation.path.map(ident => ident.value).join('.');
       let processor = registry.getNamedMacro(name);
       processor(path, annotation);
+      path.applyChanges();
       // A processor may remove the node
       if (!path.node) {
         break;
@@ -159,5 +160,6 @@ function runProcessors(list, registry, rootPath) {
 
   for (let processor of registry.globalMacros) {
     processor(rootPath);
+    rootPath.applyChanges();
   }
 }
